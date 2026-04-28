@@ -4,11 +4,12 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>KBO 토토 확률 계산기</title>
-<meta name="description" content="한국프로야구(KBO) 배당률·확률·기대값·켈리 비율 계산기 및 Elo 기반 승률 예측기" />
+<meta name="description" content="한국프로야구(KBO) 실시간 매치업 예측 · 배당률·확률·기대값·켈리 비율 계산기" />
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Pretendard", "Noto Sans KR", sans-serif; }
   .num { font-variant-numeric: tabular-nums; }
+  .pill { @apply px-2 py-0.5 rounded-full text-xs; }
 </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen">
@@ -17,9 +18,10 @@
   <div class="max-w-5xl mx-auto px-4 py-6 flex items-center justify-between">
     <div>
       <h1 class="text-xl sm:text-2xl font-bold">⚾ KBO 토토 확률 계산기</h1>
-      <p class="text-slate-300 text-sm mt-1">배당률 · 내재 확률 · 마진 제거 · 기대값(EV) · 켈리 · Elo 승률 예측</p>
+      <p class="text-slate-300 text-sm mt-1">실시간 KBO 매치업 예측 · 배당↔확률 · EV · 켈리 · Elo</p>
     </div>
     <nav class="hidden sm:flex gap-4 text-sm">
+      <a href="#today" class="hover:text-amber-300">오늘의 KBO</a>
       <a href="#odds" class="hover:text-amber-300">배당→확률</a>
       <a href="#ev" class="hover:text-amber-300">EV/켈리</a>
       <a href="#elo" class="hover:text-amber-300">KBO Elo</a>
@@ -29,10 +31,35 @@
 
 <main class="max-w-5xl mx-auto px-4 py-8 space-y-10">
 
+  <!-- 0. 오늘의 KBO -->
+  <section id="today" class="bg-white rounded-2xl shadow p-6">
+    <div class="flex items-baseline justify-between flex-wrap gap-2">
+      <h2 class="text-lg font-bold">⚾ 오늘의 KBO 매치업 · 예측</h2>
+      <p class="text-xs text-slate-500" id="dataMeta">데이터 불러오는 중…</p>
+    </div>
+    <p class="text-sm text-slate-500 mt-1 mb-4">시즌 Elo 기반 승률 예측. 일정·결과는 매일 자동 갱신(<code>.github/workflows/update-kbo.yml</code>).</p>
+
+    <div id="todayGames" class="space-y-3"></div>
+
+    <details class="mt-6">
+      <summary class="text-sm cursor-pointer text-slate-500 hover:text-slate-700">📊 시즌 순위 · Elo 보기</summary>
+      <div class="overflow-x-auto mt-3">
+        <table class="w-full text-sm num">
+          <thead class="text-slate-500 text-left">
+            <tr>
+              <th class="py-2">#</th><th>팀</th><th>승</th><th>패</th><th>무</th><th>승률</th><th>Elo</th>
+            </tr>
+          </thead>
+          <tbody id="standingsTable"></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
   <!-- 1. 배당률 → 확률 -->
   <section id="odds" class="bg-white rounded-2xl shadow p-6">
-    <h2 class="text-lg font-bold mb-1">1. 배당률 → 내재 확률 · 마진 제거</h2>
-    <p class="text-sm text-slate-500 mb-4">소수 배당(decimal odds)을 입력하세요. 마진(vig/오버라운드)이 자동으로 제거된 "공정 확률"을 보여줍니다.</p>
+    <h2 class="text-lg font-bold mb-1">배당률 → 내재 확률 · 마진 제거</h2>
+    <p class="text-sm text-slate-500 mb-4">소수 배당(decimal odds) 입력 → 마진(vig/오버라운드) 제거 후 "공정 확률"을 산출합니다.</p>
 
     <div class="flex gap-2 mb-4">
       <button id="mode2" class="px-3 py-1.5 text-sm rounded-lg bg-slate-900 text-white">2-way (승/패)</button>
@@ -54,7 +81,7 @@
 
   <!-- 2. EV / Kelly -->
   <section id="ev" class="bg-white rounded-2xl shadow p-6">
-    <h2 class="text-lg font-bold mb-1">2. 기대값(EV) · 켈리 비율</h2>
+    <h2 class="text-lg font-bold mb-1">기대값(EV) · 켈리 비율</h2>
     <p class="text-sm text-slate-500 mb-4">본인이 추정하는 진짜 확률과 배당률을 비교해 +EV 여부와 적정 베팅 사이즈를 계산합니다.</p>
 
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -81,8 +108,8 @@
 
   <!-- 3. KBO Elo -->
   <section id="elo" class="bg-white rounded-2xl shadow p-6">
-    <h2 class="text-lg font-bold mb-1">3. KBO Elo 기반 승률 예측</h2>
-    <p class="text-sm text-slate-500 mb-4">10개 구단 Elo 점수와 홈 어드밴티지(+24)를 반영해 승률·공정 배당을 산출합니다. Elo 값은 직접 조정 가능합니다.</p>
+    <h2 class="text-lg font-bold mb-1">KBO Elo 기반 승률 예측</h2>
+    <p class="text-sm text-slate-500 mb-4">시즌 데이터로부터 산출된 Elo + 홈 어드밴티지(+24)를 반영. 직접 조정도 가능합니다.</p>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div class="border rounded-xl p-4">
@@ -103,12 +130,12 @@
       </div>
     </div>
 
-    <div class="flex items-center gap-3 mt-4">
+    <div class="flex items-center gap-3 mt-4 flex-wrap">
       <label class="flex items-center gap-2 text-sm">
         <span class="text-slate-500">홈 어드밴티지(Elo)</span>
         <input id="hfa" type="number" value="24" class="w-20 border rounded-lg px-2 py-1 num" />
       </label>
-      <button id="resetElo" class="text-sm px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300">기본값 복원</button>
+      <button id="resetElo" class="text-sm px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300">시즌 데이터로 복원</button>
     </div>
 
     <div id="eloResult" class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 num"></div>
@@ -132,6 +159,115 @@
 <script>
 const $ = (id) => document.getElementById(id);
 document.getElementById("yr").textContent = new Date().getFullYear();
+
+const HFA_DEFAULT = 24;
+
+/* ---------- KBO data loader ---------- */
+const FALLBACK = {
+  season: 2026,
+  updated_at: "fallback",
+  standings: [
+    { team: "삼성 라이온즈", w:12, l:5, d:0, pct:0.706, elo:1538 },
+    { team: "KT 위즈",       w:13, l:6, d:0, pct:0.684, elo:1535 },
+    { team: "LG 트윈스",     w:12, l:6, d:0, pct:0.667, elo:1531 },
+    { team: "SSG 랜더스",    w:10, l:8, d:0, pct:0.556, elo:1510 },
+    { team: "KIA 타이거즈",  w:10, l:9, d:0, pct:0.526, elo:1505 },
+    { team: "NC 다이노스",   w:8,  l:10, d:0, pct:0.444, elo:1490 },
+    { team: "한화 이글스",   w:8,  l:10, d:0, pct:0.444, elo:1490 },
+    { team: "두산 베어스",   w:7,  l:11, d:0, pct:0.389, elo:1480 },
+    { team: "롯데 자이언츠", w:6,  l:12, d:0, pct:0.333, elo:1470 },
+    { team: "키움 히어로즈", w:5,  l:14, d:0, pct:0.263, elo:1455 },
+  ],
+  schedule: [],
+};
+
+let KBO = FALLBACK;
+
+async function loadKBO() {
+  try {
+    const r = await fetch("./data/kbo-2026.json", { cache: "no-cache" });
+    if (r.ok) KBO = await r.json();
+  } catch (e) { /* keep fallback */ }
+  $("dataMeta").textContent = `시즌 ${KBO.season} · 갱신 ${KBO.updated_at}`;
+  return KBO;
+}
+
+/* ---------- 0. Today's Games ---------- */
+function winProb(homeElo, awayElo, hfa = HFA_DEFAULT) {
+  return 1 / (1 + Math.pow(10, (awayElo - homeElo - hfa) / 400));
+}
+
+function eloByTeam() {
+  return Object.fromEntries(KBO.standings.map(s => [s.team, s.elo]));
+}
+
+function renderToday() {
+  const elos = eloByTeam();
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = (KBO.schedule || [])
+    .filter(g => g.date >= today)
+    .slice(0, 8);
+
+  if (upcoming.length === 0) {
+    $("todayGames").innerHTML = `
+      <div class="border-2 border-dashed rounded-xl p-6 text-center text-slate-500 text-sm">
+        예정 경기 데이터가 아직 없습니다. <br>
+        GitHub Action(<code>update-kbo.yml</code>)이 매일 KST 08:00에 자동 갱신합니다.
+        <div class="mt-3 text-xs">아래 "KBO Elo 기반 승률 예측"에서 직접 매치업을 시뮬레이션할 수 있어요.</div>
+      </div>`;
+    return;
+  }
+
+  $("todayGames").innerHTML = upcoming.map(g => {
+    const eh = elos[g.home] ?? 1500;
+    const ea = elos[g.away] ?? 1500;
+    const ph = winProb(eh, ea);
+    const pa = 1 - ph;
+    const fav = ph >= pa ? g.home : g.away;
+    const pct = Math.round(Math.max(ph, pa) * 1000) / 10;
+    return `
+      <div class="border rounded-xl p-4">
+        <div class="flex items-center justify-between text-xs text-slate-500">
+          <span>${g.date}${g.time ? " · " + g.time : ""}</span>
+          <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">예상 우세: ${fav} (${pct}%)</span>
+        </div>
+        <div class="mt-2 grid grid-cols-3 items-center text-center">
+          <div>
+            <div class="text-sm text-slate-500">원정</div>
+            <div class="font-bold">${g.away}</div>
+            <div class="text-xs num text-slate-400">Elo ${ea}</div>
+          </div>
+          <div class="text-2xl">@</div>
+          <div>
+            <div class="text-sm text-slate-500">홈</div>
+            <div class="font-bold">${g.home}</div>
+            <div class="text-xs num text-slate-400">Elo ${eh}</div>
+          </div>
+        </div>
+        <div class="mt-3 flex h-2 rounded-full overflow-hidden bg-slate-200">
+          <div class="bg-rose-400" style="width:${(pa*100).toFixed(1)}%"></div>
+          <div class="bg-emerald-500" style="width:${(ph*100).toFixed(1)}%"></div>
+        </div>
+        <div class="mt-1 flex justify-between text-xs num text-slate-500">
+          <span>${g.away} ${(pa*100).toFixed(1)}% (배당 ${pa>0?(1/pa).toFixed(2):"-"})</span>
+          <span>${g.home} ${(ph*100).toFixed(1)}% (배당 ${ph>0?(1/ph).toFixed(2):"-"})</span>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function renderStandings() {
+  $("standingsTable").innerHTML = KBO.standings.map((s, i) => `
+    <tr class="border-t">
+      <td class="py-1.5">${i+1}</td>
+      <td>${s.team}</td>
+      <td>${s.w}</td>
+      <td>${s.l}</td>
+      <td>${s.d || 0}</td>
+      <td>${(s.pct*1000|0)/1000}</td>
+      <td class="font-semibold">${s.elo}</td>
+    </tr>`).join("");
+}
 
 /* ---------- 1. Odds → Probability ---------- */
 const ODDS_LABELS = { 2: ["홈 승", "원정 승"], 3: ["홈 승", "무승부", "원정 승"] };
@@ -207,21 +343,12 @@ function renderEV() {
 renderEV();
 
 /* ---------- 3. KBO Elo ---------- */
-const DEFAULT_ELO = {
-  "KIA 타이거즈": 1550,
-  "삼성 라이온즈": 1530,
-  "LG 트윈스": 1525,
-  "두산 베어스": 1500,
-  "KT 위즈": 1495,
-  "SSG 랜더스": 1490,
-  "롯데 자이언츠": 1475,
-  "한화 이글스": 1470,
-  "NC 다이노스": 1465,
-  "키움 히어로즈": 1450,
-};
-const ELO_KEY = "kbo_elo_v1";
-let elo = JSON.parse(localStorage.getItem(ELO_KEY) || "null") || { ...DEFAULT_ELO };
+const ELO_KEY = "kbo_elo_v2";
+let elo = {}; // populated from JSON
 
+function defaultEloFromData() {
+  return Object.fromEntries(KBO.standings.map(s => [s.team, s.elo]));
+}
 function saveElo() { localStorage.setItem(ELO_KEY, JSON.stringify(elo)); }
 
 function fillTeams() {
@@ -230,8 +357,8 @@ function fillTeams() {
     const sel = $(id);
     sel.innerHTML = teams.map(t => `<option value="${t}">${t}</option>`).join("");
   }
-  $("homeTeam").value = "KIA 타이거즈";
-  $("awayTeam").value = "LG 트윈스";
+  $("homeTeam").value = teams[0];
+  $("awayTeam").value = teams[1] || teams[0];
   syncEloInputs();
 }
 
@@ -246,7 +373,7 @@ function renderElo() {
   const rh = parseFloat($("homeElo").value) || 0;
   const ra = parseFloat($("awayElo").value) || 0;
   const hfa = parseFloat($("hfa").value) || 0;
-  const pHome = 1 / (1 + Math.pow(10, (ra - rh - hfa) / 400));
+  const pHome = winProb(rh, ra, hfa);
   const pAway = 1 - pHome;
   const card = (label, val, accent) => `
     <div class="border rounded-xl p-4">
@@ -280,14 +407,29 @@ function renderEloTable() {
 ["homeTeam","awayTeam"].forEach(id => $(id).addEventListener("change", syncEloInputs));
 ["homeElo","awayElo","hfa"].forEach(id => $(id).addEventListener("input", renderElo));
 $("resetElo").onclick = () => {
-  elo = { ...DEFAULT_ELO };
+  elo = defaultEloFromData();
   saveElo();
   fillTeams();
   renderEloTable();
 };
 
-fillTeams();
-renderEloTable();
+/* ---------- Boot ---------- */
+(async () => {
+  await loadKBO();
+  const stored = JSON.parse(localStorage.getItem(ELO_KEY) || "null");
+  // If localStorage has a stale set from older defaults, prefer fresh data when teams differ.
+  const fresh = defaultEloFromData();
+  if (stored && Object.keys(stored).every(k => k in fresh)) {
+    elo = { ...fresh, ...stored };
+  } else {
+    elo = fresh;
+    saveElo();
+  }
+  fillTeams();
+  renderEloTable();
+  renderStandings();
+  renderToday();
+})();
 </script>
 </body>
 </html>
