@@ -111,6 +111,22 @@ function parseSchedule(html) {
   return out;
 }
 
+// Update last10 from a results-style table if present in standings page.
+function parseLast10(html, teamName) {
+  // Look for a fragment near the team name like "L10: 6-4" or sequence "WLWWLW".
+  const idx = html.indexOf(teamName);
+  if (idx < 0) return null;
+  const slice = html.slice(idx, idx + 600);
+  const seqMatch = slice.match(/\b([WL][WL]{8,9})\b/);
+  if (seqMatch) return seqMatch[1].split("");
+  const recordMatch = slice.match(/L10[:\s]+(\d{1,2})[-–](\d{1,2})/i);
+  if (recordMatch) {
+    const w = +recordMatch[1], l = +recordMatch[2];
+    return Array(w).fill("W").concat(Array(l).fill("L")).slice(0, 10);
+  }
+  return null;
+}
+
 async function main() {
   const existing = JSON.parse(await readFile(DATA_PATH, "utf8"));
   let standings = existing.standings;
@@ -121,11 +137,13 @@ async function main() {
     const html = await fetchText(STANDINGS_URL);
     const parsed = parseStandings(html);
     if (parsed.length >= 8) {
-      // Preserve team list order from existing file.
+      // Preserve team list order + rotation/team_ops/team_era/etc. from existing file.
       const byTeam = Object.fromEntries(parsed.map(p => [p.team, p]));
       standings = existing.standings.map(s => {
         const p = byTeam[s.team];
-        return p ? { ...s, w: p.w, l: p.l, d: p.d, pct: p.pct, elo: p.elo } : s;
+        if (!p) return s;
+        const last10 = parseLast10(html, s.team) || s.last10;
+        return { ...s, w: p.w, l: p.l, d: p.d, pct: p.pct, elo: p.elo, last10 };
       });
       // Re-sort by pct desc.
       standings.sort((a, b) => b.pct - a.pct);

@@ -3,13 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>KBO 토토 확률 계산기</title>
-<meta name="description" content="한국프로야구(KBO) 실시간 매치업 예측 · 배당률·확률·기대값·켈리 비율 계산기" />
+<title>KBO 토토 확률 계산기 · 전문 분석</title>
+<meta name="description" content="한국프로야구(KBO) 선발 매치업·구장·폼·휴식까지 반영한 전문 승률 분석. 배당↔확률·EV·켈리 도구 포함." />
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Pretendard", "Noto Sans KR", sans-serif; }
   .num { font-variant-numeric: tabular-nums; }
-  .pill { @apply px-2 py-0.5 rounded-full text-xs; }
 </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen">
@@ -18,13 +17,14 @@
   <div class="max-w-5xl mx-auto px-4 py-6 flex items-center justify-between">
     <div>
       <h1 class="text-xl sm:text-2xl font-bold">⚾ KBO 토토 확률 계산기</h1>
-      <p class="text-slate-300 text-sm mt-1">실시간 KBO 매치업 예측 · 배당↔확률 · EV · 켈리 · Elo</p>
+      <p class="text-slate-300 text-sm mt-1">선발·구장·폼·휴식 가중 모델 · 배당↔확률 · EV · 켈리 · Elo</p>
     </div>
     <nav class="hidden sm:flex gap-4 text-sm">
       <a href="#today" class="hover:text-amber-300">오늘의 KBO</a>
+      <a href="#teams" class="hover:text-amber-300">팀 분석</a>
       <a href="#odds" class="hover:text-amber-300">배당→확률</a>
       <a href="#ev" class="hover:text-amber-300">EV/켈리</a>
-      <a href="#elo" class="hover:text-amber-300">KBO Elo</a>
+      <a href="#elo" class="hover:text-amber-300">Elo</a>
     </nav>
   </div>
 </header>
@@ -34,20 +34,20 @@
   <!-- 0. 오늘의 KBO -->
   <section id="today" class="bg-white rounded-2xl shadow p-6">
     <div class="flex items-baseline justify-between flex-wrap gap-2">
-      <h2 class="text-lg font-bold">⚾ 오늘의 KBO 매치업 · 예측</h2>
+      <h2 class="text-lg font-bold">⚾ 오늘의 KBO 매치업 · 전문 분석</h2>
       <p class="text-xs text-slate-500" id="dataMeta">데이터 불러오는 중…</p>
     </div>
-    <p class="text-sm text-slate-500 mt-1 mb-4">시즌 Elo 기반 승률 예측. 일정·결과는 매일 자동 갱신(<code>.github/workflows/update-kbo.yml</code>).</p>
+    <p class="text-sm text-slate-500 mt-1 mb-4">Elo + 선발 매치업(FIP) + 최근 폼 + 구장 + 휴식 4개 팩터를 합성한 다요인 모델. 각 카드에서 분석 근거 펼쳐보기.</p>
 
     <div id="todayGames" class="space-y-3"></div>
 
     <details class="mt-6">
-      <summary class="text-sm cursor-pointer text-slate-500 hover:text-slate-700">📊 시즌 순위 · Elo 보기</summary>
+      <summary class="text-sm cursor-pointer text-slate-500 hover:text-slate-700">📊 시즌 순위 · Elo · 팀 OPS/ERA</summary>
       <div class="overflow-x-auto mt-3">
         <table class="w-full text-sm num">
           <thead class="text-slate-500 text-left">
             <tr>
-              <th class="py-2">#</th><th>팀</th><th>승</th><th>패</th><th>무</th><th>승률</th><th>Elo</th>
+              <th class="py-2">#</th><th>팀</th><th>승</th><th>패</th><th>승률</th><th>Elo</th><th>OPS</th><th>ERA</th><th>최근 10</th>
             </tr>
           </thead>
           <tbody id="standingsTable"></tbody>
@@ -56,10 +56,70 @@
     </details>
   </section>
 
-  <!-- 1. 배당률 → 확률 -->
+  <!-- 1. 팀 분석 -->
+  <section id="teams" class="bg-white rounded-2xl shadow p-6">
+    <h2 class="text-lg font-bold mb-1">팀 분석 (선발 로테이션 · 폼)</h2>
+    <p class="text-sm text-slate-500 mb-4">팀별 5선발 + 최근 10경기. 카드는 ERA 낮은 순으로 정렬.</p>
+    <div id="teamCards" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+  </section>
+
+  <!-- 2. 매치업 시뮬레이터 -->
+  <section id="elo" class="bg-white rounded-2xl shadow p-6">
+    <h2 class="text-lg font-bold mb-1">매치업 시뮬레이터 (전문 모델)</h2>
+    <p class="text-sm text-slate-500 mb-4">팀과 선발을 고르면 Elo + 선발 매치업 + 폼 + 구장 + 휴식까지 합성한 승률을 보여줍니다.</p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="border rounded-xl p-4">
+        <div class="text-xs text-slate-500 mb-1">홈 팀</div>
+        <select id="homeTeam" class="w-full border rounded-lg px-3 py-2"></select>
+        <div class="mt-2 text-xs text-slate-500">선발</div>
+        <select id="homeSP" class="w-full border rounded-lg px-3 py-2"></select>
+        <div class="mt-2 flex items-center gap-2 text-xs">
+          <span class="text-slate-500">휴식일</span>
+          <input id="homeRest" type="number" value="1" class="w-16 border rounded-lg px-2 py-1 num" />
+        </div>
+      </div>
+      <div class="border rounded-xl p-4">
+        <div class="text-xs text-slate-500 mb-1">원정 팀</div>
+        <select id="awayTeam" class="w-full border rounded-lg px-3 py-2"></select>
+        <div class="mt-2 text-xs text-slate-500">선발</div>
+        <select id="awaySP" class="w-full border rounded-lg px-3 py-2"></select>
+        <div class="mt-2 flex items-center gap-2 text-xs">
+          <span class="text-slate-500">휴식일</span>
+          <input id="awayRest" type="number" value="1" class="w-16 border rounded-lg px-2 py-1 num" />
+        </div>
+      </div>
+    </div>
+
+    <div id="simResult" class="mt-6"></div>
+
+    <details class="mt-6 text-sm text-slate-600">
+      <summary class="cursor-pointer text-slate-500">모델 가중치 (실시간 조정)</summary>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+        <label class="block">
+          <span class="text-xs text-slate-500">FIP 1점당 Elo</span>
+          <input id="wFip" type="number" step="0.5" value="12" class="mt-1 w-full border rounded-lg px-2 py-1 num" />
+        </label>
+        <label class="block">
+          <span class="text-xs text-slate-500">최근 폼 1승차 Elo</span>
+          <input id="wForm" type="number" step="0.5" value="3" class="mt-1 w-full border rounded-lg px-2 py-1 num" />
+        </label>
+        <label class="block">
+          <span class="text-xs text-slate-500">홈 어드밴티지(Elo)</span>
+          <input id="hfa" type="number" value="24" class="mt-1 w-full border rounded-lg px-2 py-1 num" />
+        </label>
+        <label class="block">
+          <span class="text-xs text-slate-500">휴식 우위(Elo)</span>
+          <input id="wRest" type="number" value="5" class="mt-1 w-full border rounded-lg px-2 py-1 num" />
+        </label>
+      </div>
+    </details>
+  </section>
+
+  <!-- 3. 배당률 → 확률 -->
   <section id="odds" class="bg-white rounded-2xl shadow p-6">
     <h2 class="text-lg font-bold mb-1">배당률 → 내재 확률 · 마진 제거</h2>
-    <p class="text-sm text-slate-500 mb-4">소수 배당(decimal odds) 입력 → 마진(vig/오버라운드) 제거 후 "공정 확률"을 산출합니다.</p>
+    <p class="text-sm text-slate-500 mb-4">소수 배당(decimal odds) → 마진(vig) 제거 후 공정 확률.</p>
 
     <div class="flex gap-2 mb-4">
       <button id="mode2" class="px-3 py-1.5 text-sm rounded-lg bg-slate-900 text-white">2-way (승/패)</button>
@@ -79,7 +139,7 @@
     </div>
   </section>
 
-  <!-- 2. EV / Kelly -->
+  <!-- 4. EV / Kelly -->
   <section id="ev" class="bg-white rounded-2xl shadow p-6">
     <h2 class="text-lg font-bold mb-1">기대값(EV) · 켈리 비율</h2>
     <p class="text-sm text-slate-500 mb-4">본인이 추정하는 진짜 확률과 배당률을 비교해 +EV 여부와 적정 베팅 사이즈를 계산합니다.</p>
@@ -106,46 +166,6 @@
     <div id="evResult" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 num"></div>
   </section>
 
-  <!-- 3. KBO Elo -->
-  <section id="elo" class="bg-white rounded-2xl shadow p-6">
-    <h2 class="text-lg font-bold mb-1">KBO Elo 기반 승률 예측</h2>
-    <p class="text-sm text-slate-500 mb-4">시즌 데이터로부터 산출된 Elo + 홈 어드밴티지(+24)를 반영. 직접 조정도 가능합니다.</p>
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <div class="border rounded-xl p-4">
-        <div class="text-xs text-slate-500 mb-1">홈 팀</div>
-        <select id="homeTeam" class="w-full border rounded-lg px-3 py-2"></select>
-        <div class="mt-2 flex items-center gap-2">
-          <span class="text-xs text-slate-500">Elo</span>
-          <input id="homeElo" type="number" class="w-28 border rounded-lg px-2 py-1 num" />
-        </div>
-      </div>
-      <div class="border rounded-xl p-4">
-        <div class="text-xs text-slate-500 mb-1">원정 팀</div>
-        <select id="awayTeam" class="w-full border rounded-lg px-3 py-2"></select>
-        <div class="mt-2 flex items-center gap-2">
-          <span class="text-xs text-slate-500">Elo</span>
-          <input id="awayElo" type="number" class="w-28 border rounded-lg px-2 py-1 num" />
-        </div>
-      </div>
-    </div>
-
-    <div class="flex items-center gap-3 mt-4 flex-wrap">
-      <label class="flex items-center gap-2 text-sm">
-        <span class="text-slate-500">홈 어드밴티지(Elo)</span>
-        <input id="hfa" type="number" value="24" class="w-20 border rounded-lg px-2 py-1 num" />
-      </label>
-      <button id="resetElo" class="text-sm px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300">시즌 데이터로 복원</button>
-    </div>
-
-    <div id="eloResult" class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 num"></div>
-
-    <details class="mt-6 text-sm text-slate-600">
-      <summary class="cursor-pointer text-slate-500">Elo 점수표 (편집 가능 · 로컬 저장)</summary>
-      <div id="eloTable" class="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-2"></div>
-    </details>
-  </section>
-
   <section class="text-xs text-slate-500 leading-relaxed">
     <p>※ 본 사이트는 통계·확률 학습 목적의 계산 도구입니다. 베팅 결과를 보장하지 않으며, 도박은 중독 위험이 있습니다 (도박문제 24시간 상담: 1336).</p>
   </section>
@@ -160,100 +180,163 @@
 const $ = (id) => document.getElementById(id);
 document.getElementById("yr").textContent = new Date().getFullYear();
 
-const HFA_DEFAULT = 24;
-
 /* ---------- KBO data loader ---------- */
 const FALLBACK = {
-  season: 2026,
-  updated_at: "fallback",
-  standings: [
-    { team: "삼성 라이온즈", w:12, l:5, d:0, pct:0.706, elo:1538 },
-    { team: "KT 위즈",       w:13, l:6, d:0, pct:0.684, elo:1535 },
-    { team: "LG 트윈스",     w:12, l:6, d:0, pct:0.667, elo:1531 },
-    { team: "SSG 랜더스",    w:10, l:8, d:0, pct:0.556, elo:1510 },
-    { team: "KIA 타이거즈",  w:10, l:9, d:0, pct:0.526, elo:1505 },
-    { team: "NC 다이노스",   w:8,  l:10, d:0, pct:0.444, elo:1490 },
-    { team: "한화 이글스",   w:8,  l:10, d:0, pct:0.444, elo:1490 },
-    { team: "두산 베어스",   w:7,  l:11, d:0, pct:0.389, elo:1480 },
-    { team: "롯데 자이언츠", w:6,  l:12, d:0, pct:0.333, elo:1470 },
-    { team: "키움 히어로즈", w:5,  l:14, d:0, pct:0.263, elo:1455 },
-  ],
-  schedule: [],
+  season: 2026, updated_at: "fallback",
+  model: { league_avg_fip: 4.30, elo_per_fip_point: 12, elo_per_form_game: 3, rest_advantage_elo: 5, hfa_elo: 24 },
+  park_factors: {}, team_parks: {},
+  standings: []
 };
-
 let KBO = FALLBACK;
 
 async function loadKBO() {
   try {
     const r = await fetch("./data/kbo-2026.json", { cache: "no-cache" });
     if (r.ok) KBO = await r.json();
-  } catch (e) { /* keep fallback */ }
+  } catch {}
   $("dataMeta").textContent = `시즌 ${KBO.season} · 갱신 ${KBO.updated_at}`;
-  return KBO;
+}
+
+const teamByName = () => Object.fromEntries(KBO.standings.map(t => [t.team, t]));
+const winsInLast10 = (arr) => (arr || []).filter(x => x === "W").length;
+
+/* ---------- Multi-factor prediction model ---------- */
+function predictGame(homeName, awayName, opts = {}) {
+  const teams = teamByName();
+  const h = teams[homeName], a = teams[awayName];
+  const m = KBO.model || {};
+  const fipW = +($("wFip")?.value || m.elo_per_fip_point || 12);
+  const formW = +($("wForm")?.value || m.elo_per_form_game || 3);
+  const hfa = +($("hfa")?.value || m.hfa_elo || 24);
+  const restW = +($("wRest")?.value || m.rest_advantage_elo || 5);
+
+  // Pick starters: explicit override → first in rotation
+  const homeSP = opts.homeSP || (h?.rotation?.[0] || null);
+  const awaySP = opts.awaySP || (a?.rotation?.[0] || null);
+  const leagueFip = m.league_avg_fip || 4.30;
+
+  // 1) Base Elo
+  const eloDelta = (h?.elo || 1500) - (a?.elo || 1500);
+  // 2) Starter matchup: lower FIP than league avg = positive contribution
+  const homeSpEdge = homeSP ? (leagueFip - homeSP.fip) * fipW : 0;
+  const awaySpEdge = awaySP ? (leagueFip - awaySP.fip) * fipW : 0;
+  const spDelta = homeSpEdge - awaySpEdge;
+  // 3) Recent form (W in last 10 - 5)
+  const formDelta = ((winsInLast10(h?.last10) - 5) - (winsInLast10(a?.last10) - 5)) * formW;
+  // 4) Park factor: positive = hitter park (slightly favors better-hitting team)
+  const parkName = (KBO.team_parks || {})[homeName];
+  const parkFactor = (KBO.park_factors || {})[parkName] || 1.0;
+  const offDelta = ((h?.team_ops || 0.730) - (a?.team_ops || 0.730));
+  const parkDelta = (parkFactor - 1.0) * offDelta * 1500; // small effect, scaled
+  // 5) Rest
+  const homeRest = +($("homeRest")?.value || opts.homeRest || 1);
+  const awayRest = +($("awayRest")?.value || opts.awayRest || 1);
+  const restDelta = (homeRest - awayRest) * restW;
+
+  const baseElo = eloDelta + hfa;
+  const total = baseElo + spDelta + formDelta + parkDelta + restDelta;
+  const pHome = 1 / (1 + Math.pow(10, -total / 400));
+
+  return {
+    pHome, pAway: 1 - pHome,
+    breakdown: {
+      base: { label: `Elo + 홈(${hfa})`, elo: baseElo },
+      sp:   { label: "선발 매치업 (FIP)", elo: spDelta, detail: `${homeSP?.name || "-"}(${homeSP?.fip ?? "-"}) vs ${awaySP?.name || "-"}(${awaySP?.fip ?? "-"})` },
+      form: { label: "최근 10경기 폼", elo: formDelta, detail: `${winsInLast10(h?.last10)}승 vs ${winsInLast10(a?.last10)}승` },
+      park: { label: `구장 (${parkName || "-"}, PF ${parkFactor.toFixed(2)})`, elo: parkDelta },
+      rest: { label: "휴식일 차이", elo: restDelta, detail: `${homeRest}일 vs ${awayRest}일` },
+      total
+    },
+    starters: { home: homeSP, away: awaySP }
+  };
 }
 
 /* ---------- 0. Today's Games ---------- */
-function winProb(homeElo, awayElo, hfa = HFA_DEFAULT) {
-  return 1 / (1 + Math.pow(10, (awayElo - homeElo - hfa) / 400));
-}
-
-function eloByTeam() {
-  return Object.fromEntries(KBO.standings.map(s => [s.team, s.elo]));
-}
-
 function renderToday() {
-  const elos = eloByTeam();
   const today = new Date().toISOString().slice(0, 10);
-  const upcoming = (KBO.schedule || [])
-    .filter(g => g.date >= today)
-    .slice(0, 8);
+  const upcoming = (KBO.schedule || []).filter(g => g.date >= today).slice(0, 8);
 
   if (upcoming.length === 0) {
     $("todayGames").innerHTML = `
       <div class="border-2 border-dashed rounded-xl p-6 text-center text-slate-500 text-sm">
-        예정 경기 데이터가 아직 없습니다. <br>
-        GitHub Action(<code>update-kbo.yml</code>)이 매일 KST 08:00에 자동 갱신합니다.
-        <div class="mt-3 text-xs">아래 "KBO Elo 기반 승률 예측"에서 직접 매치업을 시뮬레이션할 수 있어요.</div>
+        예정 경기 데이터가 아직 없습니다.<br>
+        Actions 탭에서 <code>Update KBO data</code> 워크플로를 한 번 실행해주세요.<br>
+        <span class="text-xs">그 전엔 아래 "매치업 시뮬레이터"에서 임의 매치업으로 분석할 수 있어요.</span>
       </div>`;
     return;
   }
 
-  $("todayGames").innerHTML = upcoming.map(g => {
-    const eh = elos[g.home] ?? 1500;
-    const ea = elos[g.away] ?? 1500;
-    const ph = winProb(eh, ea);
-    const pa = 1 - ph;
-    const fav = ph >= pa ? g.home : g.away;
-    const pct = Math.round(Math.max(ph, pa) * 1000) / 10;
-    return `
-      <div class="border rounded-xl p-4">
-        <div class="flex items-center justify-between text-xs text-slate-500">
-          <span>${g.date}${g.time ? " · " + g.time : ""}</span>
-          <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">예상 우세: ${fav} (${pct}%)</span>
-        </div>
-        <div class="mt-2 grid grid-cols-3 items-center text-center">
-          <div>
-            <div class="text-sm text-slate-500">원정</div>
-            <div class="font-bold">${g.away}</div>
-            <div class="text-xs num text-slate-400">Elo ${ea}</div>
-          </div>
-          <div class="text-2xl">@</div>
-          <div>
-            <div class="text-sm text-slate-500">홈</div>
-            <div class="font-bold">${g.home}</div>
-            <div class="text-xs num text-slate-400">Elo ${eh}</div>
-          </div>
-        </div>
-        <div class="mt-3 flex h-2 rounded-full overflow-hidden bg-slate-200">
-          <div class="bg-rose-400" style="width:${(pa*100).toFixed(1)}%"></div>
-          <div class="bg-emerald-500" style="width:${(ph*100).toFixed(1)}%"></div>
-        </div>
-        <div class="mt-1 flex justify-between text-xs num text-slate-500">
-          <span>${g.away} ${(pa*100).toFixed(1)}% (배당 ${pa>0?(1/pa).toFixed(2):"-"})</span>
-          <span>${g.home} ${(ph*100).toFixed(1)}% (배당 ${ph>0?(1/ph).toFixed(2):"-"})</span>
-        </div>
-      </div>`;
+  $("todayGames").innerHTML = upcoming.map((g, idx) => {
+    const r = predictGame(g.home, g.away, {
+      homeSP: g.homeStarter ? findSP(g.home, g.homeStarter) : null,
+      awaySP: g.awayStarter ? findSP(g.away, g.awayStarter) : null,
+    });
+    const fav = r.pHome >= r.pAway ? g.home : g.away;
+    const favPct = (Math.max(r.pHome, r.pAway) * 100).toFixed(1);
+    return gameCardHTML(g, r, fav, favPct, idx);
   }).join("");
+}
+
+function findSP(teamName, spName) {
+  const t = teamByName()[teamName];
+  return t?.rotation?.find(p => p.name === spName) || null;
+}
+
+function gameCardHTML(g, r, fav, favPct, idx) {
+  const b = r.breakdown;
+  const factors = [b.base, b.sp, b.form, b.park, b.rest];
+  const maxAbs = Math.max(...factors.map(f => Math.abs(f.elo)), 1);
+  const factorRow = (f) => `
+    <div class="flex items-center gap-2 text-xs num">
+      <div class="w-40 truncate text-slate-600">${f.label}</div>
+      <div class="flex-1 relative h-3 bg-slate-100 rounded">
+        <div class="absolute top-0 ${f.elo >= 0 ? 'left-1/2 bg-emerald-500' : 'right-1/2 bg-rose-500'} h-3 rounded"
+             style="width:${(Math.abs(f.elo)/maxAbs*50).toFixed(1)}%"></div>
+        <div class="absolute top-0 left-1/2 w-px h-3 bg-slate-300"></div>
+      </div>
+      <div class="w-16 text-right ${f.elo >= 0 ? 'text-emerald-600' : 'text-rose-600'}">
+        ${f.elo >= 0 ? '+' : ''}${f.elo.toFixed(1)}
+      </div>
+    </div>
+    ${f.detail ? `<div class="text-[11px] text-slate-400 pl-40">${f.detail}</div>` : ""}
+  `;
+  return `
+    <div class="border rounded-xl p-4">
+      <div class="flex items-center justify-between text-xs text-slate-500">
+        <span>${g.date}${g.time ? " · " + g.time : ""}</span>
+        <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">예상 우세: ${fav} (${favPct}%)</span>
+      </div>
+      <div class="mt-2 grid grid-cols-3 items-center text-center">
+        <div>
+          <div class="text-sm text-slate-500">원정</div>
+          <div class="font-bold">${g.away}</div>
+          <div class="text-xs num text-slate-400">SP: ${r.starters.away?.name || "-"} (FIP ${r.starters.away?.fip ?? "-"})</div>
+        </div>
+        <div class="text-2xl">@</div>
+        <div>
+          <div class="text-sm text-slate-500">홈</div>
+          <div class="font-bold">${g.home}</div>
+          <div class="text-xs num text-slate-400">SP: ${r.starters.home?.name || "-"} (FIP ${r.starters.home?.fip ?? "-"})</div>
+        </div>
+      </div>
+      <div class="mt-3 flex h-2 rounded-full overflow-hidden bg-slate-200">
+        <div class="bg-rose-400" style="width:${(r.pAway*100).toFixed(1)}%"></div>
+        <div class="bg-emerald-500" style="width:${(r.pHome*100).toFixed(1)}%"></div>
+      </div>
+      <div class="mt-1 flex justify-between text-xs num text-slate-500">
+        <span>${g.away} ${(r.pAway*100).toFixed(1)}% (배당 ${r.pAway>0?(1/r.pAway).toFixed(2):"-"})</span>
+        <span>${g.home} ${(r.pHome*100).toFixed(1)}% (배당 ${r.pHome>0?(1/r.pHome).toFixed(2):"-"})</span>
+      </div>
+      <details class="mt-3">
+        <summary class="text-xs text-slate-500 cursor-pointer hover:text-slate-700">🔍 분석 근거 (팩터 분해)</summary>
+        <div class="mt-3 space-y-2">
+          ${factors.map(factorRow).join("")}
+          <div class="text-xs text-slate-500 pt-2 border-t mt-2 num">
+            합산 Elo 차이: <b>${b.total.toFixed(1)}</b> → 홈 승률 <b>${(r.pHome*100).toFixed(1)}%</b>
+          </div>
+        </div>
+      </details>
+    </div>`;
 }
 
 function renderStandings() {
@@ -261,15 +344,77 @@ function renderStandings() {
     <tr class="border-t">
       <td class="py-1.5">${i+1}</td>
       <td>${s.team}</td>
-      <td>${s.w}</td>
-      <td>${s.l}</td>
-      <td>${s.d || 0}</td>
+      <td>${s.w}</td><td>${s.l}</td>
       <td>${(s.pct*1000|0)/1000}</td>
       <td class="font-semibold">${s.elo}</td>
+      <td>${(s.team_ops ?? "-").toString().slice(0,5)}</td>
+      <td>${(s.team_era ?? "-").toString().slice(0,4)}</td>
+      <td class="text-xs">${(s.last10||[]).map(x=>x==='W'?'🟢':'🔴').join('')}</td>
     </tr>`).join("");
 }
 
-/* ---------- 1. Odds → Probability ---------- */
+/* ---------- 1. Team analysis cards ---------- */
+function renderTeamCards() {
+  const sorted = [...KBO.standings].sort((a,b)=> (a.team_era||9) - (b.team_era||9));
+  $("teamCards").innerHTML = sorted.map(t => {
+    const wins = winsInLast10(t.last10);
+    return `
+      <div class="border rounded-xl p-4">
+        <div class="flex items-baseline justify-between">
+          <h3 class="font-bold">${t.team}</h3>
+          <span class="text-xs text-slate-500">Elo ${t.elo} · ${t.w}승 ${t.l}패</span>
+        </div>
+        <div class="text-xs text-slate-500 mt-1">팀 OPS ${t.team_ops?.toFixed(3) || "-"} · 팀 ERA ${t.team_era?.toFixed(2) || "-"}</div>
+        <div class="text-xs mt-1">최근 10: ${(t.last10||[]).map(x=>x==='W'?'🟢':'🔴').join('')} (${wins}-${(t.last10||[]).length-wins})</div>
+        <div class="mt-3">
+          <div class="text-xs text-slate-500 mb-1">선발 로테이션</div>
+          <table class="w-full text-xs num">
+            <thead class="text-slate-400 text-left">
+              <tr><th>선수</th><th>ERA</th><th>FIP</th><th>K/9</th><th>BB/9</th></tr>
+            </thead>
+            <tbody>
+              ${(t.rotation || []).map(p => `
+                <tr class="border-t">
+                  <td class="py-1">${p.name}</td>
+                  <td>${p.era?.toFixed(2)}</td>
+                  <td>${p.fip?.toFixed(2)}</td>
+                  <td>${p.k9?.toFixed(1)}</td>
+                  <td>${p.bb9?.toFixed(1)}</td>
+                </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+/* ---------- 2. Matchup simulator ---------- */
+function fillTeamSelects() {
+  const teams = KBO.standings.map(t => t.team);
+  for (const id of ["homeTeam","awayTeam"]) {
+    $(id).innerHTML = teams.map(t => `<option value="${t}">${t}</option>`).join("");
+  }
+  $("homeTeam").value = teams[0];
+  $("awayTeam").value = teams[1] || teams[0];
+}
+function fillSPSelect(teamName, selId) {
+  const t = teamByName()[teamName];
+  $(selId).innerHTML = (t?.rotation || []).map(p =>
+    `<option value="${p.name}">${p.name} (FIP ${p.fip?.toFixed(2)})</option>`
+  ).join("");
+}
+function renderSim() {
+  const home = $("homeTeam").value, away = $("awayTeam").value;
+  const homeSP = findSP(home, $("homeSP").value);
+  const awaySP = findSP(away, $("awaySP").value);
+  const r = predictGame(home, away, { homeSP, awaySP });
+  const fakeGame = { date: new Date().toISOString().slice(0,10), home, away, time: null };
+  const fav = r.pHome >= r.pAway ? home : away;
+  const favPct = (Math.max(r.pHome, r.pAway) * 100).toFixed(1);
+  $("simResult").innerHTML = gameCardHTML(fakeGame, r, fav, favPct, "sim");
+}
+
+/* ---------- 3. Odds → Probability ---------- */
 const ODDS_LABELS = { 2: ["홈 승", "원정 승"], 3: ["홈 승", "무승부", "원정 승"] };
 let oddsMode = 2;
 const oddsState = { 2: [1.85, 1.95], 3: [2.10, 3.30, 3.40] };
@@ -285,14 +430,12 @@ function renderOddsInputs() {
     </label>`).join("");
   document.querySelectorAll(".oddsInput").forEach(el => {
     el.addEventListener("input", e => {
-      const i = +e.target.dataset.idx;
-      oddsState[oddsMode][i] = parseFloat(e.target.value) || 0;
+      oddsState[oddsMode][+e.target.dataset.idx] = parseFloat(e.target.value) || 0;
       renderOddsTable();
     });
   });
   renderOddsTable();
 }
-
 function renderOddsTable() {
   const labels = ODDS_LABELS[oddsMode];
   const odds = oddsState[oddsMode];
@@ -307,26 +450,22 @@ function renderOddsTable() {
       <td class="font-semibold text-emerald-700">${(fair[i] * 100).toFixed(2)}%</td>
       <td>${fair[i] > 0 ? (1 / fair[i]).toFixed(3) : "-"}</td>
     </tr>`).join("");
-  const margin = (sum - 1) * 100;
-  $("overround").textContent = `오버라운드(마진): ${margin.toFixed(2)}%  ·  내재 확률 합: ${(sum * 100).toFixed(2)}%`;
+  $("overround").textContent = `오버라운드(마진): ${((sum - 1) * 100).toFixed(2)}%  ·  내재 확률 합: ${(sum * 100).toFixed(2)}%`;
 }
-
 $("mode2").onclick = () => { oddsMode = 2; $("mode2").className = "px-3 py-1.5 text-sm rounded-lg bg-slate-900 text-white"; $("mode3").className = "px-3 py-1.5 text-sm rounded-lg bg-slate-200"; renderOddsInputs(); };
 $("mode3").onclick = () => { oddsMode = 3; $("mode3").className = "px-3 py-1.5 text-sm rounded-lg bg-slate-900 text-white"; $("mode2").className = "px-3 py-1.5 text-sm rounded-lg bg-slate-200"; renderOddsInputs(); };
 renderOddsInputs();
 
-/* ---------- 2. EV / Kelly ---------- */
+/* ---------- 4. EV / Kelly ---------- */
 function renderEV() {
   const p = (parseFloat($("evProb").value) || 0) / 100;
   const o = parseFloat($("evOdds").value) || 0;
   const bank = parseFloat($("evBank").value) || 0;
   const frac = parseFloat($("evFrac").value) || 0;
-  const b = o - 1;
-  const q = 1 - p;
+  const b = o - 1, q = 1 - p;
   const evPerWon = o > 0 ? p * (o - 1) - q : 0;
   const kelly = b > 0 ? (p * b - q) / b : 0;
-  const kellyAdj = Math.max(0, kelly) * frac;
-  const stake = bank * kellyAdj;
+  const stake = bank * Math.max(0, kelly) * frac;
   const card = (label, val, accent) => `
     <div class="border rounded-xl p-4">
       <div class="text-xs text-slate-500">${label}</div>
@@ -342,93 +481,28 @@ function renderEV() {
 ["evProb","evOdds","evBank","evFrac"].forEach(id => $(id).addEventListener("input", renderEV));
 renderEV();
 
-/* ---------- 3. KBO Elo ---------- */
-const ELO_KEY = "kbo_elo_v2";
-let elo = {}; // populated from JSON
-
-function defaultEloFromData() {
-  return Object.fromEntries(KBO.standings.map(s => [s.team, s.elo]));
+/* ---------- Wiring ---------- */
+function rerenderAll() {
+  renderToday();
+  renderTeamCards();
+  renderStandings();
+  renderSim();
 }
-function saveElo() { localStorage.setItem(ELO_KEY, JSON.stringify(elo)); }
+["homeTeam","awayTeam"].forEach(id => $(id).addEventListener("change", () => {
+  fillSPSelect($("homeTeam").value, "homeSP");
+  fillSPSelect($("awayTeam").value, "awaySP");
+  renderSim();
+}));
+["homeSP","awaySP","homeRest","awayRest","wFip","wForm","hfa","wRest"].forEach(id =>
+  $(id).addEventListener("input", () => { renderSim(); renderToday(); })
+);
 
-function fillTeams() {
-  const teams = Object.keys(elo);
-  for (const id of ["homeTeam","awayTeam"]) {
-    const sel = $(id);
-    sel.innerHTML = teams.map(t => `<option value="${t}">${t}</option>`).join("");
-  }
-  $("homeTeam").value = teams[0];
-  $("awayTeam").value = teams[1] || teams[0];
-  syncEloInputs();
-}
-
-function syncEloInputs() {
-  $("homeElo").value = elo[$("homeTeam").value];
-  $("awayElo").value = elo[$("awayTeam").value];
-  renderElo();
-}
-
-function renderElo() {
-  const home = $("homeTeam").value, away = $("awayTeam").value;
-  const rh = parseFloat($("homeElo").value) || 0;
-  const ra = parseFloat($("awayElo").value) || 0;
-  const hfa = parseFloat($("hfa").value) || 0;
-  const pHome = winProb(rh, ra, hfa);
-  const pAway = 1 - pHome;
-  const card = (label, val, accent) => `
-    <div class="border rounded-xl p-4">
-      <div class="text-xs text-slate-500">${label}</div>
-      <div class="text-lg font-bold ${accent || ""}">${val}</div>
-    </div>`;
-  $("eloResult").innerHTML =
-    card(`${home} 승률`, (pHome * 100).toFixed(2) + "%", "text-emerald-600") +
-    card(`${away} 승률`, (pAway * 100).toFixed(2) + "%", "text-rose-600") +
-    card(`${home} 공정 배당`, pHome > 0 ? (1 / pHome).toFixed(3) : "-") +
-    card(`${away} 공정 배당`, pAway > 0 ? (1 / pAway).toFixed(3) : "-");
-}
-
-function renderEloTable() {
-  $("eloTable").innerHTML = Object.entries(elo).map(([t, r]) => `
-    <label class="flex items-center justify-between gap-2 border rounded-lg px-2 py-1">
-      <span class="truncate">${t}</span>
-      <input data-team="${t}" type="number" value="${r}"
-             class="eloEdit w-20 border rounded px-1 py-0.5 num text-right" />
-    </label>`).join("");
-  document.querySelectorAll(".eloEdit").forEach(el => {
-    el.addEventListener("input", e => {
-      const t = e.target.dataset.team;
-      elo[t] = parseFloat(e.target.value) || 0;
-      saveElo();
-      syncEloInputs();
-    });
-  });
-}
-
-["homeTeam","awayTeam"].forEach(id => $(id).addEventListener("change", syncEloInputs));
-["homeElo","awayElo","hfa"].forEach(id => $(id).addEventListener("input", renderElo));
-$("resetElo").onclick = () => {
-  elo = defaultEloFromData();
-  saveElo();
-  fillTeams();
-  renderEloTable();
-};
-
-/* ---------- Boot ---------- */
 (async () => {
   await loadKBO();
-  const stored = JSON.parse(localStorage.getItem(ELO_KEY) || "null");
-  // If localStorage has a stale set from older defaults, prefer fresh data when teams differ.
-  const fresh = defaultEloFromData();
-  if (stored && Object.keys(stored).every(k => k in fresh)) {
-    elo = { ...fresh, ...stored };
-  } else {
-    elo = fresh;
-    saveElo();
-  }
-  fillTeams();
-  renderEloTable();
-  renderStandings();
-  renderToday();
+  fillTeamSelects();
+  fillSPSelect($("homeTeam").value, "homeSP");
+  fillSPSelect($("awayTeam").value, "awaySP");
+  rerenderAll();
 })();
 </script>
 </body>
