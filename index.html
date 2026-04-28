@@ -25,6 +25,7 @@
       <a href="#odds" class="hover:text-amber-300">배당→확률</a>
       <a href="#ev" class="hover:text-amber-300">EV/켈리</a>
       <a href="#elo" class="hover:text-amber-300">Elo</a>
+      <a href="#bets" class="hover:text-amber-300">베팅 기록</a>
     </nav>
   </div>
 </header>
@@ -164,6 +165,98 @@
     </div>
 
     <div id="evResult" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 num"></div>
+  </section>
+
+  <!-- 5. 베팅 기록 + 백테스트 -->
+  <section id="bets" class="bg-white rounded-2xl shadow p-6">
+    <h2 class="text-lg font-bold mb-1">베팅 기록 · 예상 수익 · 백테스트</h2>
+    <p class="text-sm text-slate-500 mb-4">로컬에 저장됩니다 (브라우저 localStorage). 결과를 업데이트하면 누적 수익·ROI·모델 캘리브레이션이 자동 갱신됩니다.</p>
+
+    <!-- 통계 카드 -->
+    <div id="betStats" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6"></div>
+
+    <!-- 새 베팅 입력 -->
+    <details open class="border rounded-xl p-4 mb-6">
+      <summary class="cursor-pointer font-semibold text-sm">+ 새 베팅 추가</summary>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+        <label class="block text-xs">
+          <span class="text-slate-500">날짜</span>
+          <input id="bDate" type="date" class="mt-1 w-full border rounded-lg px-2 py-1 num" />
+        </label>
+        <label class="block text-xs">
+          <span class="text-slate-500">원정팀</span>
+          <select id="bAway" class="mt-1 w-full border rounded-lg px-2 py-1"></select>
+        </label>
+        <label class="block text-xs">
+          <span class="text-slate-500">홈팀</span>
+          <select id="bHome" class="mt-1 w-full border rounded-lg px-2 py-1"></select>
+        </label>
+        <label class="block text-xs">
+          <span class="text-slate-500">픽</span>
+          <select id="bPick" class="mt-1 w-full border rounded-lg px-2 py-1">
+            <option value="home">홈 승</option>
+            <option value="away">원정 승</option>
+          </select>
+        </label>
+        <label class="block text-xs">
+          <span class="text-slate-500">배당률</span>
+          <input id="bOdds" type="number" step="0.01" value="2.00" class="mt-1 w-full border rounded-lg px-2 py-1 num" />
+        </label>
+        <label class="block text-xs">
+          <span class="text-slate-500">베팅금 (원)</span>
+          <input id="bStake" type="number" step="1000" value="50000" class="mt-1 w-full border rounded-lg px-2 py-1 num" />
+        </label>
+        <label class="block text-xs">
+          <span class="text-slate-500">내 추정 P (%, 선택)</span>
+          <input id="bMyProb" type="number" step="0.1" placeholder="비우면 모델값" class="mt-1 w-full border rounded-lg px-2 py-1 num" />
+        </label>
+        <div class="flex items-end gap-2">
+          <button id="bAddBtn" class="flex-1 bg-slate-900 text-white text-sm rounded-lg px-3 py-1.5 hover:bg-slate-700">추가</button>
+        </div>
+      </div>
+      <p id="bPreview" class="text-xs text-slate-500 mt-3 num"></p>
+    </details>
+
+    <!-- 베팅 목록 -->
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs num">
+        <thead class="text-slate-500 text-left">
+          <tr>
+            <th class="py-2">날짜</th><th>매치</th><th>픽</th><th>배당</th><th>베팅금</th>
+            <th>모델 P</th><th>EV</th><th>결과</th><th>손익</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="betsTable"></tbody>
+      </table>
+      <p id="betsEmpty" class="text-sm text-slate-400 text-center py-6 hidden">아직 기록이 없습니다.</p>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mt-3">
+      <button id="bExportBtn" class="text-xs px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300">JSON 내보내기</button>
+      <label class="text-xs px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 cursor-pointer">
+        JSON 가져오기
+        <input id="bImportFile" type="file" accept="application/json" class="hidden" />
+      </label>
+      <button id="bClearBtn" class="text-xs px-3 py-1.5 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200">전체 삭제</button>
+    </div>
+
+    <!-- 백테스트 -->
+    <details class="mt-8 border-t pt-6">
+      <summary class="font-semibold text-sm cursor-pointer">📈 백테스트 (모델 정확도 · 캘리브레이션)</summary>
+      <div class="mt-4">
+        <p class="text-xs text-slate-500 mb-3">결과가 입력된 베팅만 사용. 모델이 X% 라고 한 베팅 중 실제 적중률이 X%에 가까울수록 모델이 잘 보정된 것입니다.</p>
+        <div id="backtestSummary" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4"></div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs num">
+            <thead class="text-slate-500 text-left">
+              <tr><th class="py-2">모델 확률 구간</th><th>표본 수</th><th>실제 적중률</th><th>평균 모델 P</th><th>차이 (실제−모델)</th></tr>
+            </thead>
+            <tbody id="calibrationTable"></tbody>
+          </table>
+        </div>
+        <p id="backtestEmpty" class="text-sm text-slate-400 text-center py-6 hidden">결정된 베팅이 없어 백테스트를 표시할 수 없습니다.</p>
+      </div>
+    </details>
   </section>
 
   <section class="text-xs text-slate-500 leading-relaxed">
@@ -494,8 +587,266 @@ function rerenderAll() {
   renderSim();
 }));
 ["homeSP","awaySP","homeRest","awayRest","wFip","wForm","hfa","wRest"].forEach(id =>
-  $(id).addEventListener("input", () => { renderSim(); renderToday(); })
+  $(id).addEventListener("input", () => { renderSim(); renderToday(); renderBetStats(); renderBackTest(); })
 );
+
+/* ---------- 5. Bet log + backtest ---------- */
+const BETS_KEY = "kbo_bets_v1";
+let bets = [];
+
+function loadBets() {
+  try { bets = JSON.parse(localStorage.getItem(BETS_KEY) || "[]"); } catch { bets = []; }
+}
+function saveBets() { localStorage.setItem(BETS_KEY, JSON.stringify(bets)); }
+
+function modelProbForBet(home, away, pick) {
+  if (!home || !away || !teamByName()[home] || !teamByName()[away]) return null;
+  const r = predictGame(home, away, {});
+  return pick === "home" ? r.pHome : r.pAway;
+}
+
+function fillBetTeamSelects() {
+  const teams = KBO.standings.map(t => t.team);
+  for (const id of ["bAway","bHome"]) {
+    $(id).innerHTML = teams.map(t => `<option value="${t}">${t}</option>`).join("");
+  }
+  $("bHome").value = teams[0];
+  $("bAway").value = teams[1] || teams[0];
+}
+
+function previewBet() {
+  const home = $("bHome").value, away = $("bAway").value;
+  const pick = $("bPick").value;
+  const odds = parseFloat($("bOdds").value) || 0;
+  const stake = parseFloat($("bStake").value) || 0;
+  const myP = parseFloat($("bMyProb").value);
+  const modelP = modelProbForBet(home, away, pick);
+  const p = Number.isFinite(myP) ? myP / 100 : modelP;
+  if (!p || !odds) { $("bPreview").textContent = ""; return; }
+  const ev = p * (odds - 1) - (1 - p);
+  const expProfit = stake * ev;
+  $("bPreview").innerHTML =
+    `모델 P(${pick === "home" ? home : away}): <b>${(modelP*100).toFixed(1)}%</b>` +
+    `  ·  사용 P: <b>${(p*100).toFixed(1)}%</b>` +
+    `  ·  EV: <b class="${ev>=0?"text-emerald-600":"text-rose-600"}">${(ev*100).toFixed(2)}%</b>` +
+    `  ·  예상 손익: <b class="${expProfit>=0?"text-emerald-600":"text-rose-600"}">${expProfit>=0?"+":""}${Math.round(expProfit).toLocaleString()} 원</b>`;
+}
+
+function addBet() {
+  const home = $("bHome").value, away = $("bAway").value;
+  const pick = $("bPick").value;
+  const odds = parseFloat($("bOdds").value) || 0;
+  const stake = parseFloat($("bStake").value) || 0;
+  const myP = parseFloat($("bMyProb").value);
+  if (!odds || !stake || home === away) return;
+  const modelP = modelProbForBet(home, away, pick);
+  bets.push({
+    id: Date.now() + Math.random().toString(36).slice(2, 6),
+    date: $("bDate").value || new Date().toISOString().slice(0, 10),
+    away, home, pick, odds, stake,
+    myProb: Number.isFinite(myP) ? myP / 100 : null,
+    modelProb: modelP,
+    result: "pending",
+  });
+  saveBets();
+  renderBets(); renderBetStats(); renderBackTest();
+}
+
+function setResult(id, result) {
+  const b = bets.find(x => x.id === id);
+  if (!b) return;
+  b.result = result;
+  saveBets();
+  renderBets(); renderBetStats(); renderBackTest();
+}
+function deleteBet(id) {
+  bets = bets.filter(x => x.id !== id);
+  saveBets();
+  renderBets(); renderBetStats(); renderBackTest();
+}
+
+function pnl(bet) {
+  if (bet.result === "win")  return bet.stake * (bet.odds - 1);
+  if (bet.result === "lose") return -bet.stake;
+  return 0;
+}
+
+function renderBets() {
+  const empty = bets.length === 0;
+  $("betsEmpty").classList.toggle("hidden", !empty);
+  if (empty) { $("betsTable").innerHTML = ""; return; }
+  // Sort by date desc
+  const sorted = [...bets].sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
+  $("betsTable").innerHTML = sorted.map(b => {
+    const p = Number.isFinite(b.myProb) ? b.myProb : b.modelProb;
+    const ev = p && b.odds ? (p * (b.odds - 1) - (1 - p)) : 0;
+    const profit = pnl(b);
+    const profColor = b.result === "pending" ? "text-slate-400" : profit > 0 ? "text-emerald-600" : profit < 0 ? "text-rose-600" : "text-slate-500";
+    const evColor = ev > 0 ? "text-emerald-600" : ev < 0 ? "text-rose-600" : "text-slate-500";
+    const matchLabel = `${b.away} @ ${b.home}`;
+    const pickLabel = b.pick === "home" ? `홈(${b.home})` : `원정(${b.away})`;
+    const opts = [
+      ["pending", "대기"],
+      ["win", "적중"],
+      ["lose", "실패"],
+      ["push", "취소/적특"],
+    ];
+    const select = `<select data-id="${b.id}" class="resultSel border rounded px-1 py-0.5 text-xs">
+      ${opts.map(([v, t]) => `<option value="${v}" ${b.result===v?"selected":""}>${t}</option>`).join("")}
+    </select>`;
+    return `<tr class="border-t">
+      <td class="py-1.5">${b.date}</td>
+      <td class="text-[11px]">${matchLabel}</td>
+      <td>${pickLabel}</td>
+      <td>${b.odds.toFixed(2)}</td>
+      <td>${b.stake.toLocaleString()}</td>
+      <td>${b.modelProb != null ? (b.modelProb*100).toFixed(1)+"%" : "-"}</td>
+      <td class="${evColor}">${(ev*100).toFixed(1)}%</td>
+      <td>${select}</td>
+      <td class="${profColor}">${b.result==="pending" ? "-" : (profit>=0?"+":"") + Math.round(profit).toLocaleString()}</td>
+      <td><button data-del="${b.id}" class="delBtn text-rose-500 hover:text-rose-700 text-xs">삭제</button></td>
+    </tr>`;
+  }).join("");
+  document.querySelectorAll(".resultSel").forEach(el =>
+    el.addEventListener("change", e => setResult(e.target.dataset.id, e.target.value))
+  );
+  document.querySelectorAll(".delBtn").forEach(el =>
+    el.addEventListener("click", e => deleteBet(e.target.dataset.del))
+  );
+}
+
+function renderBetStats() {
+  const settled = bets.filter(b => b.result === "win" || b.result === "lose");
+  const pending = bets.filter(b => b.result === "pending");
+  const totalStake = bets.reduce((s, b) => s + b.stake, 0);
+  const settledStake = settled.reduce((s, b) => s + b.stake, 0);
+  const profit = settled.reduce((s, b) => s + pnl(b), 0);
+  const wins = settled.filter(b => b.result === "win").length;
+  const hitRate = settled.length ? wins / settled.length : 0;
+  const roi = settledStake ? profit / settledStake : 0;
+  // Expected profit on pending bets
+  const expProfit = pending.reduce((s, b) => {
+    const p = Number.isFinite(b.myProb) ? b.myProb : b.modelProb;
+    if (!p || !b.odds) return s;
+    return s + b.stake * (p * (b.odds - 1) - (1 - p));
+  }, 0);
+  const card = (label, val, accent) => `
+    <div class="border rounded-xl p-4">
+      <div class="text-xs text-slate-500">${label}</div>
+      <div class="text-lg font-bold ${accent || ""}">${val}</div>
+    </div>`;
+  const profColor = profit > 0 ? "text-emerald-600" : profit < 0 ? "text-rose-600" : "";
+  const roiColor = roi > 0 ? "text-emerald-600" : roi < 0 ? "text-rose-600" : "";
+  const expColor = expProfit > 0 ? "text-emerald-600" : expProfit < 0 ? "text-rose-600" : "";
+  $("betStats").innerHTML =
+    card("누적 베팅금", totalStake.toLocaleString() + " 원") +
+    card(`적중률 (${wins}/${settled.length})`, (hitRate * 100).toFixed(1) + "%") +
+    card("실현 손익", (profit>=0?"+":"") + Math.round(profit).toLocaleString() + " 원", profColor) +
+    card("실현 ROI", (roi * 100).toFixed(2) + "%", roiColor) +
+    card("대기 베팅 수", pending.length + " 건") +
+    card("대기 예상 손익", (expProfit>=0?"+":"") + Math.round(expProfit).toLocaleString() + " 원", expColor) +
+    card("총 베팅 수", bets.length + " 건") +
+    card("결정 베팅 수", settled.length + " 건");
+}
+
+function renderBackTest() {
+  const settled = bets.filter(b => (b.result === "win" || b.result === "lose") && b.modelProb != null);
+  const empty = settled.length === 0;
+  $("backtestEmpty").classList.toggle("hidden", !empty);
+  if (empty) { $("backtestSummary").innerHTML = ""; $("calibrationTable").innerHTML = ""; return; }
+
+  // Buckets of model probability
+  const buckets = [
+    { label: "<40%", min: 0, max: 0.4 },
+    { label: "40–50%", min: 0.4, max: 0.5 },
+    { label: "50–60%", min: 0.5, max: 0.6 },
+    { label: "60–70%", min: 0.6, max: 0.7 },
+    { label: "≥70%", min: 0.7, max: 1.01 },
+  ];
+  const rows = buckets.map(bk => {
+    const inB = settled.filter(b => b.modelProb >= bk.min && b.modelProb < bk.max);
+    if (inB.length === 0) return null;
+    const wins = inB.filter(b => b.result === "win").length;
+    const hit = wins / inB.length;
+    const avgP = inB.reduce((s, b) => s + b.modelProb, 0) / inB.length;
+    const diff = hit - avgP;
+    return { label: bk.label, n: inB.length, hit, avgP, diff };
+  }).filter(Boolean);
+
+  $("calibrationTable").innerHTML = rows.map(r => `
+    <tr class="border-t">
+      <td class="py-1.5">${r.label}</td>
+      <td>${r.n}</td>
+      <td>${(r.hit*100).toFixed(1)}%</td>
+      <td>${(r.avgP*100).toFixed(1)}%</td>
+      <td class="${Math.abs(r.diff)<0.05?'text-emerald-600':r.diff>0?'text-emerald-600':'text-rose-600'}">${(r.diff>=0?'+':'')+(r.diff*100).toFixed(1)}%p</td>
+    </tr>`).join("");
+
+  // Summary cards: model accuracy + ROI of +EV bets only
+  const wins = settled.filter(b => b.result === "win").length;
+  const accuracy = wins / settled.length;
+  const meanP = settled.reduce((s, b) => s + b.modelProb, 0) / settled.length;
+  // Brier score (lower = better)
+  const brier = settled.reduce((s, b) => {
+    const actual = b.result === "win" ? 1 : 0;
+    return s + Math.pow(b.modelProb - actual, 2);
+  }, 0) / settled.length;
+  // ROI of model-flagged +EV bets
+  const plusEV = settled.filter(b => (b.modelProb * (b.odds - 1) - (1 - b.modelProb)) > 0);
+  const plusEVStake = plusEV.reduce((s, b) => s + b.stake, 0);
+  const plusEVProfit = plusEV.reduce((s, b) => s + pnl(b), 0);
+  const plusEVRoi = plusEVStake ? plusEVProfit / plusEVStake : 0;
+
+  const card = (label, val, accent) => `
+    <div class="border rounded-xl p-4">
+      <div class="text-xs text-slate-500">${label}</div>
+      <div class="text-lg font-bold ${accent || ""}">${val}</div>
+    </div>`;
+  $("backtestSummary").innerHTML =
+    card("표본 (결정된 베팅)", settled.length + " 건") +
+    card("실제 적중률", (accuracy*100).toFixed(1) + "%") +
+    card("평균 모델 P", (meanP*100).toFixed(1) + "%") +
+    card("Brier (낮을수록 ↑)", brier.toFixed(3)) +
+    card(`+EV 픽 ROI (${plusEV.length}건)`,
+      plusEV.length ? ((plusEVRoi*100).toFixed(2) + "%") : "-",
+      plusEVRoi > 0 ? "text-emerald-600" : plusEVRoi < 0 ? "text-rose-600" : "");
+}
+
+function exportBets() {
+  const blob = new Blob([JSON.stringify(bets, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `kbo-bets-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importBets(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const arr = JSON.parse(e.target.result);
+      if (!Array.isArray(arr)) throw new Error("not array");
+      bets = arr;
+      saveBets();
+      renderBets(); renderBetStats(); renderBackTest();
+    } catch { alert("JSON 파일 형식 오류"); }
+  };
+  reader.readAsText(file);
+}
+
+// Wiring
+$("bAddBtn").addEventListener("click", addBet);
+["bHome","bAway","bPick","bOdds","bStake","bMyProb"].forEach(id =>
+  $(id).addEventListener("input", previewBet)
+);
+$("bExportBtn").addEventListener("click", exportBets);
+$("bImportFile").addEventListener("change", e => e.target.files[0] && importBets(e.target.files[0]));
+$("bClearBtn").addEventListener("click", () => {
+  if (confirm("정말 모든 베팅 기록을 삭제할까요?")) {
+    bets = []; saveBets();
+    renderBets(); renderBetStats(); renderBackTest();
+  }
+});
 
 (async () => {
   await loadKBO();
@@ -503,6 +854,14 @@ function rerenderAll() {
   fillSPSelect($("homeTeam").value, "homeSP");
   fillSPSelect($("awayTeam").value, "awaySP");
   rerenderAll();
+
+  loadBets();
+  fillBetTeamSelects();
+  $("bDate").value = new Date().toISOString().slice(0, 10);
+  previewBet();
+  renderBets();
+  renderBetStats();
+  renderBackTest();
 })();
 </script>
 </body>
