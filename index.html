@@ -26,6 +26,7 @@
       <a href="#ev" class="hover:text-amber-300">EV/켈리</a>
       <a href="#elo" class="hover:text-amber-300">Elo</a>
       <a href="#bets" class="hover:text-amber-300">베팅 기록</a>
+      <a href="#picks" class="hover:text-amber-300">추천 픽</a>
     </nav>
   </div>
 </header>
@@ -165,6 +166,72 @@
     </div>
 
     <div id="evResult" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 num"></div>
+  </section>
+
+  <!-- 4.5 추천 픽 분석기 -->
+  <section id="picks" class="bg-white rounded-2xl shadow p-6">
+    <div class="flex items-baseline justify-between flex-wrap gap-2">
+      <h2 class="text-lg font-bold">🎯 오늘의 추천 베팅 · 날짜별 분석</h2>
+    </div>
+    <p class="text-sm text-slate-500 mt-1 mb-4">날짜를 고르면 해당일 매치업의 모델 예측·시장 배당·EV·켈리·예상 수익을 표로 보여드립니다. 일정이 비어있으면 직접 매치업을 추가할 수 있습니다.</p>
+
+    <div class="flex flex-wrap items-end gap-3 mb-4">
+      <label class="block text-xs">
+        <span class="text-slate-500">분석 날짜</span>
+        <input id="picksDate" type="date" class="mt-1 border rounded-lg px-2 py-1 num" />
+      </label>
+      <label class="block text-xs">
+        <span class="text-slate-500">총 자금 (원)</span>
+        <input id="picksBank" type="number" step="10000" value="1000000" class="mt-1 border rounded-lg px-2 py-1 num w-32" />
+      </label>
+      <label class="block text-xs">
+        <span class="text-slate-500">켈리 분수</span>
+        <input id="picksFrac" type="number" step="0.05" value="0.25" min="0" max="1" class="mt-1 border rounded-lg px-2 py-1 num w-20" />
+      </label>
+      <label class="block text-xs">
+        <span class="text-slate-500">시장 마진 (vig %)</span>
+        <input id="picksVig" type="number" step="0.5" value="5" class="mt-1 border rounded-lg px-2 py-1 num w-20" />
+      </label>
+      <button id="picksTodayBtn" class="text-xs px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300">오늘로 이동</button>
+    </div>
+
+    <div id="picksSummary" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 num"></div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs num">
+        <thead class="text-slate-500 text-left">
+          <tr>
+            <th class="py-2">매치</th><th>픽</th><th>모델 P</th><th>공정 배당</th>
+            <th>시장 배당</th><th>EV%</th><th>Kelly%</th><th>추천 베팅금</th>
+            <th>예상 수익</th><th>실제</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="picksTable"></tbody>
+      </table>
+      <p id="picksEmpty" class="text-sm text-slate-400 text-center py-6 hidden"></p>
+    </div>
+
+    <details class="mt-6 border-t pt-4">
+      <summary class="text-sm font-semibold cursor-pointer">+ 임의 매치업 직접 추가</summary>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+        <label class="block text-xs">
+          <span class="text-slate-500">원정팀</span>
+          <select id="adhocAway" class="mt-1 w-full border rounded-lg px-2 py-1"></select>
+        </label>
+        <label class="block text-xs">
+          <span class="text-slate-500">홈팀</span>
+          <select id="adhocHome" class="mt-1 w-full border rounded-lg px-2 py-1"></select>
+        </label>
+        <label class="block text-xs">
+          <span class="text-slate-500">시각 (선택)</span>
+          <input id="adhocTime" type="time" class="mt-1 w-full border rounded-lg px-2 py-1 num" />
+        </label>
+        <div class="flex items-end">
+          <button id="adhocAddBtn" class="w-full text-xs bg-slate-900 text-white rounded-lg px-3 py-1.5 hover:bg-slate-700">선택 날짜에 추가</button>
+        </div>
+      </div>
+      <p class="text-[11px] text-slate-400 mt-2">추가한 매치업은 브라우저에 저장됩니다 (kbo_adhoc_v1). 시즌 데이터의 schedule 과 합쳐서 표시됩니다.</p>
+    </details>
   </section>
 
   <!-- 5. 베팅 기록 + 백테스트 -->
@@ -848,6 +915,175 @@ $("bClearBtn").addEventListener("click", () => {
   }
 });
 
+/* ---------- 6. Picks analyzer (date-based best bets) ---------- */
+const ADHOC_KEY = "kbo_adhoc_v1";
+let adhoc = []; // user-added games {date, home, away, time}
+
+function loadAdhoc() {
+  try { adhoc = JSON.parse(localStorage.getItem(ADHOC_KEY) || "[]"); } catch { adhoc = []; }
+}
+function saveAdhoc() { localStorage.setItem(ADHOC_KEY, JSON.stringify(adhoc)); }
+
+function gamesForDate(dateStr) {
+  const fromSeed = (KBO.schedule || []).filter(g => g.date === dateStr);
+  const fromAdhoc = adhoc.filter(g => g.date === dateStr);
+  // Merge, dedupe by (date, home, away)
+  const all = [...fromSeed, ...fromAdhoc];
+  const seen = new Set();
+  return all.filter(g => {
+    const k = `${g.date}|${g.home}|${g.away}`;
+    if (seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+}
+
+function findResultForGame(g) {
+  // Look up KBO.results [{ date, home, away, hRuns, aRuns }]
+  return (KBO.results || []).find(r => r.date === g.date && r.home === g.home && r.away === g.away) || null;
+}
+
+function renderPicks() {
+  const date = $("picksDate").value || new Date().toISOString().slice(0, 10);
+  const bank = parseFloat($("picksBank").value) || 0;
+  const frac = parseFloat($("picksFrac").value) || 0;
+  const vig = (parseFloat($("picksVig").value) || 0) / 100;
+
+  const games = gamesForDate(date);
+  if (games.length === 0) {
+    $("picksEmpty").textContent = `${date} 일정에 등록된 매치업이 없습니다. 아래 "임의 매치업 추가" 로 직접 넣어보세요.`;
+    $("picksEmpty").classList.remove("hidden");
+    $("picksTable").innerHTML = "";
+    $("picksSummary").innerHTML = "";
+    return;
+  }
+  $("picksEmpty").classList.add("hidden");
+
+  const rows = games.map(g => {
+    const r = predictGame(g.home, g.away, {});
+    const isHome = r.pHome >= r.pAway;
+    const pick = isHome ? "home" : "away";
+    const p = isHome ? r.pHome : r.pAway;
+    const fairOdds = p > 0 ? 1 / p : 0;
+    // Default market odds: fair × (1 + vig/2) per side, capped to fair if vig=0
+    const defaultMarketOdds = +(fairOdds / (1 + vig)).toFixed(2);
+    const stored = (window.__picksOdds = window.__picksOdds || {});
+    const key = `${g.date}|${g.home}|${g.away}`;
+    if (stored[key] == null) stored[key] = defaultMarketOdds;
+    const marketOdds = stored[key];
+    const ev = marketOdds > 0 ? p * (marketOdds - 1) - (1 - p) : 0;
+    const b = marketOdds - 1;
+    const kelly = b > 0 ? (p * b - (1 - p)) / b : 0;
+    const stake = bank * Math.max(0, kelly) * frac;
+    const expProfit = stake * ev;
+    const result = findResultForGame(g);
+    const actual = result ? (result.hRuns > result.aRuns ? "home" : result.aRuns > result.hRuns ? "away" : "draw") : null;
+    const correct = actual ? (pick === actual) : null;
+
+    return { g, r, pick, p, fairOdds, marketOdds, ev, kelly, stake, expProfit, actual, correct, key };
+  });
+
+  rows.sort((a, b) => b.ev - a.ev);
+  const totalExpProfit = rows.reduce((s, r) => s + r.expProfit, 0);
+  const plusEV = rows.filter(r => r.ev > 0);
+  const best = rows[0];
+
+  const card = (label, val, accent) => `
+    <div class="border rounded-xl p-4">
+      <div class="text-xs text-slate-500">${label}</div>
+      <div class="text-base font-bold ${accent || ""}">${val}</div>
+    </div>`;
+  $("picksSummary").innerHTML =
+    card("게임 수", rows.length + " 경기") +
+    card("+EV 픽", plusEV.length + " 건") +
+    card("최고 픽",
+      best ? `${best.pick === "home" ? best.g.home : best.g.away} (EV ${(best.ev*100).toFixed(2)}%)` : "-",
+      best && best.ev > 0 ? "text-emerald-600" : best && best.ev < 0 ? "text-rose-600" : ""
+    ) +
+    card("합산 예상 수익",
+      (totalExpProfit >= 0 ? "+" : "") + Math.round(totalExpProfit).toLocaleString() + " 원",
+      totalExpProfit > 0 ? "text-emerald-600" : totalExpProfit < 0 ? "text-rose-600" : ""
+    );
+
+  $("picksTable").innerHTML = rows.map((row, idx) => {
+    const { g, p, fairOdds, marketOdds, ev, kelly, stake, expProfit, actual, correct, key, pick } = row;
+    const evColor = ev > 0 ? "text-emerald-600" : ev < 0 ? "text-rose-600" : "text-slate-500";
+    const profColor = expProfit > 0 ? "text-emerald-600" : expProfit < 0 ? "text-rose-600" : "text-slate-500";
+    const pickLabel = pick === "home" ? `홈(${g.home})` : `원정(${g.away})`;
+    const resultBadge = actual === null ? `<span class="text-slate-400">-</span>` :
+      correct ? `<span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">적중</span>` :
+                `<span class="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">실패</span>`;
+    const isBest = idx === 0 && ev > 0;
+    return `<tr class="border-t ${isBest ? 'bg-amber-50' : ''}">
+      <td class="py-1.5 text-[11px]">${isBest ? "🏆 " : ""}${g.away} @ ${g.home}${g.time ? `<br><span class='text-slate-400'>${g.time}</span>` : ""}</td>
+      <td>${pickLabel}</td>
+      <td>${(p*100).toFixed(1)}%</td>
+      <td>${fairOdds.toFixed(2)}</td>
+      <td><input data-key="${key}" type="number" step="0.01" value="${marketOdds}" class="picksOdds w-16 border rounded px-1 py-0.5 num text-right" /></td>
+      <td class="${evColor}">${(ev*100).toFixed(2)}%</td>
+      <td>${(kelly*100).toFixed(2)}%</td>
+      <td>${Math.round(stake).toLocaleString()}</td>
+      <td class="${profColor}">${expProfit>=0?"+":""}${Math.round(expProfit).toLocaleString()}</td>
+      <td>${resultBadge}</td>
+      <td><button data-add="${key}" class="picksAdd text-[11px] px-2 py-0.5 rounded bg-slate-900 text-white hover:bg-slate-700">베팅 추가</button></td>
+    </tr>`;
+  }).join("");
+
+  document.querySelectorAll(".picksOdds").forEach(el =>
+    el.addEventListener("input", e => {
+      window.__picksOdds[e.target.dataset.key] = parseFloat(e.target.value) || 0;
+      renderPicks();
+    })
+  );
+  document.querySelectorAll(".picksAdd").forEach(el =>
+    el.addEventListener("click", e => {
+      const key = e.target.dataset.add;
+      const row = rows.find(r => r.key === key);
+      if (!row) return;
+      bets.push({
+        id: Date.now() + Math.random().toString(36).slice(2, 6),
+        date: row.g.date, away: row.g.away, home: row.g.home, pick: row.pick,
+        odds: row.marketOdds, stake: Math.round(row.stake) || 50000,
+        myProb: null, modelProb: row.p, result: "pending",
+      });
+      saveBets();
+      renderBets(); renderBetStats(); renderBackTest();
+      e.target.textContent = "✓ 추가됨";
+      e.target.classList.add("bg-emerald-600");
+      setTimeout(() => { e.target.textContent = "베팅 추가"; e.target.classList.remove("bg-emerald-600"); }, 1500);
+    })
+  );
+}
+
+function fillAdhocSelects() {
+  const teams = KBO.standings.map(t => t.team);
+  for (const id of ["adhocAway","adhocHome"]) {
+    $(id).innerHTML = teams.map(t => `<option value="${t}">${t}</option>`).join("");
+  }
+  $("adhocAway").value = teams[0];
+  $("adhocHome").value = teams[1] || teams[0];
+}
+
+$("picksTodayBtn").addEventListener("click", () => {
+  $("picksDate").value = new Date().toISOString().slice(0, 10);
+  renderPicks();
+});
+["picksDate","picksBank","picksFrac","picksVig"].forEach(id =>
+  $(id).addEventListener("input", () => {
+    if (id === "picksVig" || id === "picksDate") window.__picksOdds = {};
+    renderPicks();
+  })
+);
+$("adhocAddBtn").addEventListener("click", () => {
+  const date = $("picksDate").value;
+  const home = $("adhocHome").value, away = $("adhocAway").value;
+  const time = $("adhocTime").value || null;
+  if (!date || !home || !away || home === away) return;
+  adhoc.push({ date, home, away, time });
+  saveAdhoc();
+  window.__picksOdds = {};
+  renderPicks();
+});
+
 (async () => {
   await loadKBO();
   fillTeamSelects();
@@ -862,6 +1098,11 @@ $("bClearBtn").addEventListener("click", () => {
   renderBets();
   renderBetStats();
   renderBackTest();
+
+  loadAdhoc();
+  fillAdhocSelects();
+  $("picksDate").value = new Date().toISOString().slice(0, 10);
+  renderPicks();
 })();
 </script>
 </body>
