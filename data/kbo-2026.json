@@ -1,7 +1,7 @@
 {
   "season": 2026,
-  "updated_at": "2026-05-06",
-  "source": "mykbostats.com (auto, 2026-05-06T23:42:54.087Z)",
+  "updated_at": "2026-05-07",
+  "source": "mykbostats.com (auto, 2026-05-07T23:47:53.625Z)",
   "note": "Elo seeded from 2026 win% with regression to mean (50-game prior). Hand and OPS splits are seed estimates; refreshed when scraper succeeds.",
   "model": {
     "league_avg_fip": 4.3,
@@ -41,7 +41,7 @@
       "code": "WO",
       "w": 10,
       "l": 12,
-      "d": 21,
+      "d": 22,
       "pct": 0.455,
       "elo": 1490,
       "team_ops": 0.7,
@@ -104,80 +104,13 @@
       ]
     },
     {
-      "team": "한화 이글스",
-      "code": "HH",
-      "w": 9,
-      "l": 13,
-      "d": 19,
-      "pct": 0.409,
-      "elo": 1481,
-      "team_ops": 0.73,
-      "team_ops_vs_l": 0.745,
-      "team_ops_vs_r": 0.726,
-      "team_era": 4.45,
-      "last10": [
-        "L",
-        "L",
-        "W",
-        "W",
-        "L",
-        "L",
-        "W",
-        "W",
-        "L",
-        "W"
-      ],
-      "rotation": [
-        {
-          "name": "와이스",
-          "hand": "R",
-          "era": 3.75,
-          "fip": 3.9,
-          "k9": 8.4,
-          "bb9": 2.7
-        },
-        {
-          "name": "폰세",
-          "hand": "R",
-          "era": 4,
-          "fip": 4.1,
-          "k9": 8,
-          "bb9": 2.9
-        },
-        {
-          "name": "문동주",
-          "hand": "R",
-          "era": 4.35,
-          "fip": 4.2,
-          "k9": 8.6,
-          "bb9": 3.2
-        },
-        {
-          "name": "류현진",
-          "hand": "L",
-          "era": 4.5,
-          "fip": 4.4,
-          "k9": 7.5,
-          "bb9": 2.6
-        },
-        {
-          "name": "황준서",
-          "hand": "L",
-          "era": 5.1,
-          "fip": 4.8,
-          "k9": 6.8,
-          "bb9": 3.4
-        }
-      ]
-    },
-    {
       "team": "롯데 자이언츠",
       "code": "LT",
-      "w": 8,
+      "w": 9,
       "l": 13,
       "d": 18,
-      "pct": 0.381,
-      "elo": 1476,
+      "pct": 0.409,
+      "elo": 1481,
       "team_ops": 0.71,
       "team_ops_vs_l": 0.722,
       "team_ops_vs_r": 0.706,
@@ -238,13 +171,80 @@
       ]
     },
     {
+      "team": "한화 이글스",
+      "code": "HH",
+      "w": 8,
+      "l": 14,
+      "d": 19,
+      "pct": 0.364,
+      "elo": 1471,
+      "team_ops": 0.73,
+      "team_ops_vs_l": 0.745,
+      "team_ops_vs_r": 0.726,
+      "team_era": 4.45,
+      "last10": [
+        "L",
+        "L",
+        "W",
+        "W",
+        "L",
+        "L",
+        "W",
+        "W",
+        "L",
+        "W"
+      ],
+      "rotation": [
+        {
+          "name": "와이스",
+          "hand": "R",
+          "era": 3.75,
+          "fip": 3.9,
+          "k9": 8.4,
+          "bb9": 2.7
+        },
+        {
+          "name": "폰세",
+          "hand": "R",
+          "era": 4,
+          "fip": 4.1,
+          "k9": 8,
+          "bb9": 2.9
+        },
+        {
+          "name": "문동주",
+          "hand": "R",
+          "era": 4.35,
+          "fip": 4.2,
+          "k9": 8.6,
+          "bb9": 3.2
+        },
+        {
+          "name": "류현진",
+          "hand": "L",
+          "era": 4.5,
+          "fip": 4.4,
+          "k9": 7.5,
+          "bb9": 2.6
+        },
+        {
+          "name": "황준서",
+          "hand": "L",
+          "era": 5.1,
+          "fip": 4.8,
+          "k9": 6.8,
+          "bb9": 3.4
+        }
+      ]
+    },
+    {
       "team": "두산 베어스",
       "code": "OB",
-      "w": 7,
-      "l": 14,
+      "w": 6,
+      "l": 15,
       "d": 18,
-      "pct": 0.333,
-      "elo": 1466,
+      "pct": 0.286,
+      "elo": 1456,
       "team_ops": 0.715,
       "team_ops_vs_l": 0.728,
       "team_ops_vs_r": 0.711,
@@ -305,80 +305,13 @@
       ]
     },
     {
-      "team": "NC 다이노스",
-      "code": "NC",
-      "w": 6,
-      "l": 14,
-      "d": 17,
-      "pct": 0.3,
-      "elo": 1460,
-      "team_ops": 0.72,
-      "team_ops_vs_l": 0.73,
-      "team_ops_vs_r": 0.717,
-      "team_era": 4.4,
-      "last10": [
-        "L",
-        "W",
-        "L",
-        "W",
-        "L",
-        "W",
-        "L",
-        "W",
-        "L",
-        "W"
-      ],
-      "rotation": [
-        {
-          "name": "카스타노",
-          "hand": "L",
-          "era": 3.8,
-          "fip": 4,
-          "k9": 8,
-          "bb9": 2.6
-        },
-        {
-          "name": "라일리",
-          "hand": "L",
-          "era": 4.25,
-          "fip": 4.3,
-          "k9": 7.6,
-          "bb9": 2.8
-        },
-        {
-          "name": "신민혁",
-          "hand": "R",
-          "era": 4.5,
-          "fip": 4.4,
-          "k9": 7,
-          "bb9": 3
-        },
-        {
-          "name": "김시훈",
-          "hand": "R",
-          "era": 4.85,
-          "fip": 4.6,
-          "k9": 6.9,
-          "bb9": 3.2
-        },
-        {
-          "name": "이재학",
-          "hand": "R",
-          "era": 5.3,
-          "fip": 4.95,
-          "k9": 6.4,
-          "bb9": 3.5
-        }
-      ]
-    },
-    {
       "team": "KIA 타이거즈",
       "code": "HT",
-      "w": 5,
+      "w": 6,
       "l": 15,
-      "d": 17,
-      "pct": 0.25,
-      "elo": 1450,
+      "d": 18,
+      "pct": 0.286,
+      "elo": 1456,
       "team_ops": 0.77,
       "team_ops_vs_l": 0.785,
       "team_ops_vs_r": 0.766,
@@ -439,13 +372,80 @@
       ]
     },
     {
+      "team": "NC 다이노스",
+      "code": "NC",
+      "w": 5,
+      "l": 15,
+      "d": 17,
+      "pct": 0.25,
+      "elo": 1450,
+      "team_ops": 0.72,
+      "team_ops_vs_l": 0.73,
+      "team_ops_vs_r": 0.717,
+      "team_era": 4.4,
+      "last10": [
+        "L",
+        "W",
+        "L",
+        "W",
+        "L",
+        "W",
+        "L",
+        "W",
+        "L",
+        "W"
+      ],
+      "rotation": [
+        {
+          "name": "카스타노",
+          "hand": "L",
+          "era": 3.8,
+          "fip": 4,
+          "k9": 8,
+          "bb9": 2.6
+        },
+        {
+          "name": "라일리",
+          "hand": "L",
+          "era": 4.25,
+          "fip": 4.3,
+          "k9": 7.6,
+          "bb9": 2.8
+        },
+        {
+          "name": "신민혁",
+          "hand": "R",
+          "era": 4.5,
+          "fip": 4.4,
+          "k9": 7,
+          "bb9": 3
+        },
+        {
+          "name": "김시훈",
+          "hand": "R",
+          "era": 4.85,
+          "fip": 4.6,
+          "k9": 6.9,
+          "bb9": 3.2
+        },
+        {
+          "name": "이재학",
+          "hand": "R",
+          "era": 5.3,
+          "fip": 4.95,
+          "k9": 6.4,
+          "bb9": 3.5
+        }
+      ]
+    },
+    {
       "team": "삼성 라이온즈",
       "code": "SS",
-      "w": 4,
-      "l": 17,
+      "w": 3,
+      "l": 18,
       "d": 14,
-      "pct": 0.19,
-      "elo": 1436,
+      "pct": 0.143,
+      "elo": 1426,
       "team_ops": 0.76,
       "team_ops_vs_l": 0.778,
       "team_ops_vs_r": 0.755,
@@ -510,7 +510,7 @@
       "code": "SK",
       "w": 3,
       "l": 18,
-      "d": 13,
+      "d": 14,
       "pct": 0.143,
       "elo": 1426,
       "team_ops": 0.735,
@@ -577,7 +577,7 @@
       "code": "LG",
       "w": 2,
       "l": 21,
-      "d": 11,
+      "d": 12,
       "pct": 0.087,
       "elo": 1407,
       "team_ops": 0.755,
