@@ -1,7 +1,7 @@
 {
   "season": 2026,
-  "updated_at": "2026-06-01",
-  "source": "mykbostats.com (auto, 2026-06-01T00:01:02.798Z)",
+  "updated_at": "2026-06-02",
+  "source": "mykbostats.com (auto, 2026-06-02T00:08:34.436Z)",
   "note": "Elo seeded from 2026 win% with regression to mean (50-game prior). Hand and OPS splits are seed estimates; refreshed when scraper succeeds.",
   "model": {
     "league_avg_fip": 4.3,
