@@ -1,7 +1,7 @@
 {
   "season": 2026,
-  "updated_at": "2026-06-19",
-  "source": "mykbostats.com (auto, 2026-06-19T00:20:37.226Z)",
+  "updated_at": "2026-06-20",
+  "source": "mykbostats.com (auto, 2026-06-20T00:02:51.987Z)",
   "note": "Elo seeded from 2026 win% with regression to mean (50-game prior). Hand and OPS splits are seed estimates; refreshed when scraper succeeds.",
   "model": {
     "league_avg_fip": 4.3,
@@ -41,7 +41,7 @@
       "code": "WO",
       "w": 10,
       "l": 26,
-      "d": 43,
+      "d": 44,
       "pct": 0.278,
       "elo": 1435,
       "team_ops": 0.7,
@@ -104,80 +104,13 @@
       ]
     },
     {
-      "team": "롯데 자이언츠",
-      "code": "LT",
-      "w": 9,
-      "l": 26,
-      "d": 39,
-      "pct": 0.257,
-      "elo": 1430,
-      "team_ops": 0.71,
-      "team_ops_vs_l": 0.722,
-      "team_ops_vs_r": 0.706,
-      "team_era": 4.7,
-      "last10": [
-        "L",
-        "L",
-        "W",
-        "L",
-        "L",
-        "W",
-        "L",
-        "W",
-        "L",
-        "L"
-      ],
-      "rotation": [
-        {
-          "name": "윌커슨",
-          "hand": "R",
-          "era": 4.1,
-          "fip": 4.2,
-          "k9": 7.9,
-          "bb9": 2.8
-        },
-        {
-          "name": "반즈",
-          "hand": "L",
-          "era": 4.45,
-          "fip": 4.4,
-          "k9": 7.6,
-          "bb9": 3
-        },
-        {
-          "name": "박세웅",
-          "hand": "R",
-          "era": 4.75,
-          "fip": 4.55,
-          "k9": 7.2,
-          "bb9": 3
-        },
-        {
-          "name": "나균안",
-          "hand": "R",
-          "era": 5,
-          "fip": 4.75,
-          "k9": 7,
-          "bb9": 3.4
-        },
-        {
-          "name": "김진욱",
-          "hand": "L",
-          "era": 5.5,
-          "fip": 5,
-          "k9": 6.8,
-          "bb9": 3.7
-        }
-      ]
-    },
-    {
       "team": "SSG 랜더스",
       "code": "SK",
-      "w": 8,
+      "w": 9,
       "l": 27,
-      "d": 39,
-      "pct": 0.229,
-      "elo": 1421,
+      "d": 40,
+      "pct": 0.25,
+      "elo": 1426,
       "team_ops": 0.735,
       "team_ops_vs_l": 0.748,
       "team_ops_vs_r": 0.732,
@@ -238,13 +171,80 @@
       ]
     },
     {
+      "team": "롯데 자이언츠",
+      "code": "LT",
+      "w": 8,
+      "l": 27,
+      "d": 39,
+      "pct": 0.229,
+      "elo": 1421,
+      "team_ops": 0.71,
+      "team_ops_vs_l": 0.722,
+      "team_ops_vs_r": 0.706,
+      "team_era": 4.7,
+      "last10": [
+        "L",
+        "L",
+        "W",
+        "L",
+        "L",
+        "W",
+        "L",
+        "W",
+        "L",
+        "L"
+      ],
+      "rotation": [
+        {
+          "name": "윌커슨",
+          "hand": "R",
+          "era": 4.1,
+          "fip": 4.2,
+          "k9": 7.9,
+          "bb9": 2.8
+        },
+        {
+          "name": "반즈",
+          "hand": "L",
+          "era": 4.45,
+          "fip": 4.4,
+          "k9": 7.6,
+          "bb9": 3
+        },
+        {
+          "name": "박세웅",
+          "hand": "R",
+          "era": 4.75,
+          "fip": 4.55,
+          "k9": 7.2,
+          "bb9": 3
+        },
+        {
+          "name": "나균안",
+          "hand": "R",
+          "era": 5,
+          "fip": 4.75,
+          "k9": 7,
+          "bb9": 3.4
+        },
+        {
+          "name": "김진욱",
+          "hand": "L",
+          "era": 5.5,
+          "fip": 5,
+          "k9": 6.8,
+          "bb9": 3.7
+        }
+      ]
+    },
+    {
       "team": "NC 다이노스",
       "code": "NC",
-      "w": 7,
-      "l": 31,
+      "w": 6,
+      "l": 32,
       "d": 34,
-      "pct": 0.184,
-      "elo": 1403,
+      "pct": 0.158,
+      "elo": 1394,
       "team_ops": 0.72,
       "team_ops_vs_l": 0.73,
       "team_ops_vs_r": 0.717,
@@ -376,7 +376,7 @@
       "code": "OB",
       "w": 5,
       "l": 34,
-      "d": 33,
+      "d": 34,
       "pct": 0.128,
       "elo": 1382,
       "team_ops": 0.715,
@@ -442,10 +442,10 @@
       "team": "KIA 타이거즈",
       "code": "HT",
       "w": 4,
-      "l": 36,
+      "l": 37,
       "d": 32,
-      "pct": 0.1,
-      "elo": 1371,
+      "pct": 0.098,
+      "elo": 1368,
       "team_ops": 0.77,
       "team_ops_vs_l": 0.785,
       "team_ops_vs_r": 0.766,
@@ -577,7 +577,7 @@
       "code": "KT",
       "w": 2,
       "l": 40,
-      "d": 26,
+      "d": 27,
       "pct": 0.048,
       "elo": 1348,
       "team_ops": 0.745,
@@ -643,10 +643,10 @@
       "team": "LG 트윈스",
       "code": "LG",
       "w": 1,
-      "l": 42,
+      "l": 43,
       "d": 26,
       "pct": 0.023,
-      "elo": 1335,
+      "elo": 1333,
       "team_ops": 0.755,
       "team_ops_vs_l": 0.77,
       "team_ops_vs_r": 0.751,
