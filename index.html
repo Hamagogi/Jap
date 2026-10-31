@@ -27,6 +27,7 @@
       <a href="#elo" class="hover:text-amber-300">Elo</a>
       <a href="#bets" class="hover:text-amber-300">베팅 기록</a>
       <a href="#picks" class="hover:text-amber-300">추천 픽</a>
+      <a href="#parlay" class="hover:text-amber-300">파레이</a>
     </nav>
   </div>
 </header>
@@ -49,7 +50,7 @@
         <table class="w-full text-sm num">
           <thead class="text-slate-500 text-left">
             <tr>
-              <th class="py-2">#</th><th>팀</th><th>승</th><th>패</th><th>승률</th><th>Elo</th><th>OPS</th><th>ERA</th><th>최근 10</th>
+              <th class="py-2">#</th><th>팀</th><th>승</th><th>패</th><th>승률</th><th>Elo</th><th>OPS</th><th>vs좌</th><th>vs우</th><th>ERA</th><th>최근 10</th>
             </tr>
           </thead>
           <tbody id="standingsTable"></tbody>
@@ -326,8 +327,44 @@
     </details>
   </section>
 
+  <!-- 6. 파레이 (조합) 계산기 -->
+  <section id="parlay" class="bg-white rounded-2xl shadow p-6">
+    <h2 class="text-lg font-bold mb-1">🎰 다중 베팅 (조합 / 파레이) 계산기</h2>
+    <p class="text-sm text-slate-500 mb-4">2-leg 이상의 조합 베팅. 각 다리의 모델 P × 곱 → 조합 확률 / 곱 → 조합 배당. EV/Kelly 도 자동.</p>
+
+    <div class="flex flex-wrap items-end gap-3 mb-4">
+      <button id="parAddLeg"   class="text-xs px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-700">+ 다리 추가</button>
+      <button id="parAddDay"   class="text-xs px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300">📅 분석 날짜의 모든 +EV 픽 자동 추가</button>
+      <button id="parClear"    class="text-xs px-3 py-1.5 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200">전체 비우기</button>
+      <label class="block text-xs">
+        <span class="text-slate-500">총 자금</span>
+        <input id="parBank" type="number" step="10000" value="1000000" class="mt-1 border rounded-lg px-2 py-1 num w-32" />
+      </label>
+      <label class="block text-xs">
+        <span class="text-slate-500">베팅금</span>
+        <input id="parStake" type="number" step="1000" value="20000" class="mt-1 border rounded-lg px-2 py-1 num w-28" />
+      </label>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs num">
+        <thead class="text-slate-500 text-left">
+          <tr>
+            <th class="py-2">#</th><th>원정</th><th>홈</th><th>픽</th>
+            <th>모델 P</th><th>시장 배당</th><th>EV%</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="parlayTable"></tbody>
+      </table>
+      <p id="parlayEmpty" class="text-sm text-slate-400 text-center py-4 hidden">다리를 추가하세요.</p>
+    </div>
+
+    <div id="parlaySummary" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 num"></div>
+  </section>
+
   <section class="text-xs text-slate-500 leading-relaxed">
     <p>※ 본 사이트는 통계·확률 학습 목적의 계산 도구입니다. 베팅 결과를 보장하지 않으며, 도박은 중독 위험이 있습니다 (도박문제 24시간 상담: 1336).</p>
+    <p class="mt-1">파레이 주의: 조합 베팅은 다리가 늘수록 승률이 급격히 떨어지고 마진이 누적됩니다. 한 다리라도 빗나가면 전체 실패.</p>
   </section>
 
 </main>
@@ -369,42 +406,52 @@ function predictGame(homeName, awayName, opts = {}) {
   const formW = +($("wForm")?.value || m.elo_per_form_game || 3);
   const hfa = +($("hfa")?.value || m.hfa_elo || 24);
   const restW = +($("wRest")?.value || m.rest_advantage_elo || 5);
+  const opsW = m.elo_per_100_ops_diff || 200;
 
-  // Pick starters: explicit override → first in rotation
   const homeSP = opts.homeSP || (h?.rotation?.[0] || null);
   const awaySP = opts.awaySP || (a?.rotation?.[0] || null);
   const leagueFip = m.league_avg_fip || 4.30;
 
-  // 1) Base Elo
+  // 1) Base Elo + HFA
   const eloDelta = (h?.elo || 1500) - (a?.elo || 1500);
-  // 2) Starter matchup: lower FIP than league avg = positive contribution
+  // 2) Starter FIP edge
   const homeSpEdge = homeSP ? (leagueFip - homeSP.fip) * fipW : 0;
   const awaySpEdge = awaySP ? (leagueFip - awaySP.fip) * fipW : 0;
   const spDelta = homeSpEdge - awaySpEdge;
-  // 3) Recent form (W in last 10 - 5)
+  // 3) Recent form
   const formDelta = ((winsInLast10(h?.last10) - 5) - (winsInLast10(a?.last10) - 5)) * formW;
-  // 4) Park factor: positive = hitter park (slightly favors better-hitting team)
+  // 4) Park
   const parkName = (KBO.team_parks || {})[homeName];
   const parkFactor = (KBO.park_factors || {})[parkName] || 1.0;
   const offDelta = ((h?.team_ops || 0.730) - (a?.team_ops || 0.730));
-  const parkDelta = (parkFactor - 1.0) * offDelta * 1500; // small effect, scaled
+  const parkDelta = (parkFactor - 1.0) * offDelta * 1500;
   // 5) Rest
   const homeRest = +($("homeRest")?.value || opts.homeRest || 1);
   const awayRest = +($("awayRest")?.value || opts.awayRest || 1);
   const restDelta = (homeRest - awayRest) * restW;
+  // 6) Platoon (L/R splits) — applied only if opposing pitcher hand is known
+  const homeOpsKey = awaySP?.hand === "L" ? "team_ops_vs_l" : awaySP?.hand === "R" ? "team_ops_vs_r" : null;
+  const awayOpsKey = homeSP?.hand === "L" ? "team_ops_vs_l" : homeSP?.hand === "R" ? "team_ops_vs_r" : null;
+  const homeOps = (homeOpsKey && h?.[homeOpsKey]) ?? h?.team_ops ?? 0.730;
+  const awayOps = (awayOpsKey && a?.[awayOpsKey]) ?? a?.team_ops ?? 0.730;
+  const platoonDelta = (homeOps - awayOps) * opsW;
+  const platoonDetail = (homeOpsKey && awayOpsKey)
+    ? `${homeName} OPS vs ${awaySP.hand}투 ${homeOps.toFixed(3)} − ${awayName} OPS vs ${homeSP.hand}투 ${awayOps.toFixed(3)}`
+    : "선발 손잡이 정보 없음 → 0";
 
   const baseElo = eloDelta + hfa;
-  const total = baseElo + spDelta + formDelta + parkDelta + restDelta;
+  const total = baseElo + spDelta + formDelta + parkDelta + restDelta + platoonDelta;
   const pHome = 1 / (1 + Math.pow(10, -total / 400));
 
   return {
     pHome, pAway: 1 - pHome,
     breakdown: {
-      base: { label: `Elo + 홈(${hfa})`, elo: baseElo },
-      sp:   { label: "선발 매치업 (FIP)", elo: spDelta, detail: `${homeSP?.name || "-"}(${homeSP?.fip ?? "-"}) vs ${awaySP?.name || "-"}(${awaySP?.fip ?? "-"})` },
-      form: { label: "최근 10경기 폼", elo: formDelta, detail: `${winsInLast10(h?.last10)}승 vs ${winsInLast10(a?.last10)}승` },
-      park: { label: `구장 (${parkName || "-"}, PF ${parkFactor.toFixed(2)})`, elo: parkDelta },
-      rest: { label: "휴식일 차이", elo: restDelta, detail: `${homeRest}일 vs ${awayRest}일` },
+      base:    { label: `Elo + 홈(${hfa})`, elo: baseElo },
+      sp:      { label: "선발 매치업 (FIP)", elo: spDelta, detail: `${homeSP?.name || "-"}(${homeSP?.hand || "?"}, FIP ${homeSP?.fip ?? "-"}) vs ${awaySP?.name || "-"}(${awaySP?.hand || "?"}, FIP ${awaySP?.fip ?? "-"})` },
+      form:    { label: "최근 10경기 폼", elo: formDelta, detail: `${winsInLast10(h?.last10)}승 vs ${winsInLast10(a?.last10)}승` },
+      park:    { label: `구장 (${parkName || "-"}, PF ${parkFactor.toFixed(2)})`, elo: parkDelta },
+      rest:    { label: "휴식일 차이", elo: restDelta, detail: `${homeRest}일 vs ${awayRest}일` },
+      platoon: { label: "타선-선발 손잡이 매치업", elo: platoonDelta, detail: platoonDetail },
       total
     },
     starters: { home: homeSP, away: awaySP }
@@ -444,7 +491,7 @@ function findSP(teamName, spName) {
 
 function gameCardHTML(g, r, fav, favPct, idx) {
   const b = r.breakdown;
-  const factors = [b.base, b.sp, b.form, b.park, b.rest];
+  const factors = [b.base, b.sp, b.form, b.park, b.rest, b.platoon].filter(Boolean);
   const maxAbs = Math.max(...factors.map(f => Math.abs(f.elo)), 1);
   const factorRow = (f) => `
     <div class="flex items-center gap-2 text-xs num">
@@ -508,6 +555,8 @@ function renderStandings() {
       <td>${(s.pct*1000|0)/1000}</td>
       <td class="font-semibold">${s.elo}</td>
       <td>${(s.team_ops ?? "-").toString().slice(0,5)}</td>
+      <td>${(s.team_ops_vs_l ?? "-").toString().slice(0,5)}</td>
+      <td>${(s.team_ops_vs_r ?? "-").toString().slice(0,5)}</td>
       <td>${(s.team_era ?? "-").toString().slice(0,4)}</td>
       <td class="text-xs">${(s.last10||[]).map(x=>x==='W'?'🟢':'🔴').join('')}</td>
     </tr>`).join("");
@@ -530,12 +579,13 @@ function renderTeamCards() {
           <div class="text-xs text-slate-500 mb-1">선발 로테이션</div>
           <table class="w-full text-xs num">
             <thead class="text-slate-400 text-left">
-              <tr><th>선수</th><th>ERA</th><th>FIP</th><th>K/9</th><th>BB/9</th></tr>
+              <tr><th>선수</th><th>손</th><th>ERA</th><th>FIP</th><th>K/9</th><th>BB/9</th></tr>
             </thead>
             <tbody>
               ${(t.rotation || []).map(p => `
                 <tr class="border-t">
                   <td class="py-1">${p.name}</td>
+                  <td><span class="px-1 rounded ${p.hand==='L'?'bg-rose-100 text-rose-700':p.hand==='R'?'bg-sky-100 text-sky-700':'bg-slate-100 text-slate-500'}">${p.hand || '?'}</span></td>
                   <td>${p.era?.toFixed(2)}</td>
                   <td>${p.fip?.toFixed(2)}</td>
                   <td>${p.k9?.toFixed(1)}</td>
@@ -560,7 +610,7 @@ function fillTeamSelects() {
 function fillSPSelect(teamName, selId) {
   const t = teamByName()[teamName];
   $(selId).innerHTML = (t?.rotation || []).map(p =>
-    `<option value="${p.name}">${p.name} (FIP ${p.fip?.toFixed(2)})</option>`
+    `<option value="${p.name}">${p.name} (${p.hand || '?'}, FIP ${p.fip?.toFixed(2)})</option>`
   ).join("");
 }
 function renderSim() {
@@ -1084,6 +1134,146 @@ $("adhocAddBtn").addEventListener("click", () => {
   renderPicks();
 });
 
+/* ---------- 7. Parlay (combo bet) calculator ---------- */
+const PARLAY_KEY = "kbo_parlay_v1";
+let parlay = []; // [{ id, away, home, pick, odds }]
+
+function loadParlay() {
+  try { parlay = JSON.parse(localStorage.getItem(PARLAY_KEY) || "[]"); } catch { parlay = []; }
+}
+function saveParlay() { localStorage.setItem(PARLAY_KEY, JSON.stringify(parlay)); }
+
+function defaultLeg() {
+  const teams = KBO.standings.map(t => t.team);
+  return {
+    id: Date.now() + Math.random().toString(36).slice(2, 6),
+    away: teams[1] || teams[0],
+    home: teams[0],
+    pick: "home",
+    odds: 1.90,
+  };
+}
+
+function parlayLegRow(leg, idx) {
+  const teams = KBO.standings.map(t => t.team);
+  const opt = (val, sel) => teams.map(t => `<option value="${t}" ${t===val?"selected":""}>${t}</option>`).join("");
+  const r = predictGame(leg.home, leg.away, {});
+  const p = leg.pick === "home" ? r.pHome : r.pAway;
+  const ev = leg.odds > 0 ? p * (leg.odds - 1) - (1 - p) : 0;
+  const evColor = ev > 0 ? "text-emerald-600" : ev < 0 ? "text-rose-600" : "text-slate-500";
+  return `<tr class="border-t" data-id="${leg.id}">
+    <td class="py-1.5">${idx+1}</td>
+    <td><select data-field="away" class="parField w-24 border rounded px-1 py-0.5 text-[11px]">${opt(leg.away)}</select></td>
+    <td><select data-field="home" class="parField w-24 border rounded px-1 py-0.5 text-[11px]">${opt(leg.home)}</select></td>
+    <td><select data-field="pick" class="parField w-16 border rounded px-1 py-0.5 text-[11px]">
+      <option value="home" ${leg.pick==="home"?"selected":""}>홈</option>
+      <option value="away" ${leg.pick==="away"?"selected":""}>원정</option>
+    </select></td>
+    <td>${(p*100).toFixed(1)}%</td>
+    <td><input data-field="odds" type="number" step="0.01" value="${leg.odds}" class="parField w-16 border rounded px-1 py-0.5 num text-right" /></td>
+    <td class="${evColor}">${(ev*100).toFixed(1)}%</td>
+    <td><button data-del="${leg.id}" class="parDel text-rose-500 hover:text-rose-700 text-xs">삭제</button></td>
+  </tr>`;
+}
+
+function renderParlay() {
+  const empty = parlay.length === 0;
+  $("parlayEmpty").classList.toggle("hidden", !empty);
+  if (empty) { $("parlayTable").innerHTML = ""; $("parlaySummary").innerHTML = ""; return; }
+  $("parlayTable").innerHTML = parlay.map(parlayLegRow).join("");
+
+  // Combined stats
+  const probs = parlay.map(leg => {
+    const r = predictGame(leg.home, leg.away, {});
+    return leg.pick === "home" ? r.pHome : r.pAway;
+  });
+  const oddsArr = parlay.map(leg => leg.odds);
+  const combinedP = probs.reduce((a, b) => a * b, 1);
+  const combinedOdds = oddsArr.reduce((a, b) => a * b, 1);
+  const fairCombinedOdds = combinedP > 0 ? 1 / combinedP : 0;
+  const ev = combinedP * (combinedOdds - 1) - (1 - combinedP);
+  const stake = parseFloat($("parStake").value) || 0;
+  const bank = parseFloat($("parBank").value) || 0;
+  const b = combinedOdds - 1;
+  const kelly = b > 0 ? (combinedP * b - (1 - combinedP)) / b : 0;
+  const recStake = bank * Math.max(0, kelly) * 0.25;
+  const expProfit = stake * ev;
+  const potentialPayout = stake * combinedOdds;
+
+  const card = (label, val, accent) => `
+    <div class="border rounded-xl p-4">
+      <div class="text-xs text-slate-500">${label}</div>
+      <div class="text-base font-bold ${accent || ""}">${val}</div>
+    </div>`;
+  const evColor = ev > 0 ? "text-emerald-600" : ev < 0 ? "text-rose-600" : "";
+  const expColor = expProfit > 0 ? "text-emerald-600" : expProfit < 0 ? "text-rose-600" : "";
+  $("parlaySummary").innerHTML =
+    card("조합 확률", (combinedP * 100).toFixed(2) + "%") +
+    card("조합 배당", combinedOdds.toFixed(3)) +
+    card("공정 배당", fairCombinedOdds.toFixed(3)) +
+    card("EV%", (ev * 100).toFixed(2) + "%", evColor) +
+    card("적중 시 예상 지급", Math.round(potentialPayout).toLocaleString() + " 원") +
+    card("예상 손익", (expProfit>=0?"+":"") + Math.round(expProfit).toLocaleString() + " 원", expColor) +
+    card("Kelly 비율 (풀)", (kelly * 100).toFixed(2) + "%") +
+    card("켈리 추천 (× 0.25)", Math.round(recStake).toLocaleString() + " 원");
+
+  document.querySelectorAll(".parField").forEach(el =>
+    el.addEventListener("change", e => {
+      const id = e.target.closest("tr").dataset.id;
+      const leg = parlay.find(l => l.id === id);
+      if (!leg) return;
+      const f = e.target.dataset.field;
+      leg[f] = f === "odds" ? (parseFloat(e.target.value) || 0) : e.target.value;
+      saveParlay();
+      renderParlay();
+    })
+  );
+  document.querySelectorAll(".parDel").forEach(el =>
+    el.addEventListener("click", e => {
+      parlay = parlay.filter(l => l.id !== e.target.dataset.del);
+      saveParlay();
+      renderParlay();
+    })
+  );
+}
+
+$("parAddLeg").addEventListener("click", () => {
+  parlay.push(defaultLeg());
+  saveParlay();
+  renderParlay();
+});
+$("parClear").addEventListener("click", () => {
+  if (parlay.length === 0 || confirm("모든 다리를 삭제할까요?")) {
+    parlay = []; saveParlay(); renderParlay();
+  }
+});
+$("parAddDay").addEventListener("click", () => {
+  // Auto-add all +EV picks for the picks-analyzer date
+  const date = $("picksDate").value || new Date().toISOString().slice(0, 10);
+  const games = gamesForDate(date);
+  const vig = (parseFloat($("picksVig").value) || 0) / 100;
+  let added = 0;
+  games.forEach(g => {
+    const r = predictGame(g.home, g.away, {});
+    const isHome = r.pHome >= r.pAway;
+    const p = isHome ? r.pHome : r.pAway;
+    const fair = p > 0 ? 1 / p : 0;
+    const market = +(fair / (1 + vig)).toFixed(2);
+    const ev = market > 0 ? p * (market - 1) - (1 - p) : 0;
+    if (ev > 0) {
+      parlay.push({
+        id: Date.now() + Math.random().toString(36).slice(2, 6),
+        away: g.away, home: g.home, pick: isHome ? "home" : "away", odds: market,
+      });
+      added++;
+    }
+  });
+  saveParlay();
+  renderParlay();
+  if (added === 0) alert(`${date} 일정에 +EV 픽이 없습니다 (또는 일정이 비어있음).`);
+});
+["parBank","parStake"].forEach(id => $(id).addEventListener("input", renderParlay));
+
 (async () => {
   await loadKBO();
   fillTeamSelects();
@@ -1103,6 +1293,9 @@ $("adhocAddBtn").addEventListener("click", () => {
   fillAdhocSelects();
   $("picksDate").value = new Date().toISOString().slice(0, 10);
   renderPicks();
+
+  loadParlay();
+  renderParlay();
 })();
 </script>
 </body>
