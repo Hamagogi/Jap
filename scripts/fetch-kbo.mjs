@@ -86,6 +86,7 @@ function parseStandings(html) {
 
 function parseSchedule(html) {
   // Best-effort: pick game rows with date + two teams. Keep next 14 days.
+  // Try to extract probable pitcher names too (Korean text inside the row).
   const out = [];
   const today = new Date();
   const horizon = new Date(today.getTime() + 14 * 86400000);
@@ -101,11 +102,18 @@ function parseSchedule(html) {
       .map(x => normalizeTeam(x[1])).filter(Boolean);
     if (teamMatches.length < 2) continue;
     const timeMatch = row.match(/(\d{1,2}:\d{2})/);
+    // Probable pitchers: look for Korean names (2-4 hangul chars) typically near team names.
+    // mykbostats often shows "P: 김광현" or just "김광현 vs 원태인".
+    const pitcherMatches = [...row.matchAll(/[가-힣]{2,4}/g)]
+      .map(x => x[0])
+      .filter(s => !["원정","홈","경기","선발","승","패","무"].includes(s));
     out.push({
       date: d.toISOString().slice(0, 10),
       away: teamMatches[0],
       home: teamMatches[1],
       time: timeMatch ? timeMatch[1] : null,
+      awayStarter: pitcherMatches[0] || null,
+      homeStarter: pitcherMatches[1] || null,
     });
   }
   return out;
